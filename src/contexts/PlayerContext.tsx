@@ -171,6 +171,25 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const getLyricsForRecommendation = (song: Song): string =>
     (song.lyrics || getSongLyrics(song).map(line => line.text).join(' ')).slice(0, 12000);
 
+  const normalizedSongTitle = (song: Song): string => (song.titleHe || song.title || '')
+    .toLocaleLowerCase()
+    .normalize('NFKC')
+    .replace(/[\u0591-\u05C7]/g, '')
+    .replace(/\([^)]*\)|\[[^\]]*\]/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\b(official|audio|video|lyrics|קליפ|רשמי|אודיו|מילים)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const isSameSong = (left: Song, right: Song): boolean => {
+    if (left.id === right.id) return true;
+    const leftTitle = normalizedSongTitle(left);
+    const rightTitle = normalizedSongTitle(right);
+    return Boolean(leftTitle && rightTitle && (
+      leftTitle === rightTitle || leftTitle.includes(rightTitle) || rightTitle.includes(leftTitle)
+    ));
+  };
+
   // Load and merge liked songs with server
   useEffect(() => {
     if (token) {
@@ -598,6 +617,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const updatedHistory = prev.currentSong
         ? [prev.currentSong, ...prev.history.slice(0, 49)]
         : prev.history;
+      const sourceQueue = newQueue !== undefined ? newQueue : prev.queue;
+      const cleanQueue = sourceQueue.filter((queuedSong, index, allQueuedSongs) =>
+        !isSameSong(queuedSong, targetSong) &&
+        allQueuedSongs.findIndex(candidate => isSameSong(candidate, queuedSong)) === index
+      );
 
       return {
         ...prev,
@@ -608,7 +632,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isBuffering: true,
         error: null,
         history: updatedHistory,
-        queue: newQueue !== undefined ? newQueue : prev.queue,
+        queue: cleanQueue,
         isFullPlayerOpen: true,
       };
     });
@@ -640,7 +664,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       .then(data => {
         if (data.similarTracks && Array.isArray(data.similarTracks)) {
           // Filter out current song
-          const filtered = data.similarTracks.filter((s: Song) => s.id !== targetSong.id);
+          const filtered = data.similarTracks.filter((s: Song) => !isSameSong(s, targetSong));
           setSimilarSongs(filtered);
         }
       })
@@ -866,17 +890,19 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const addToQueue = (song: Song) => {
-    setPlayback(prev => ({
-      ...prev,
-      queue: [...prev.queue, song],
-    }));
+    setPlayback(prev => {
+      if (prev.currentSong && isSameSong(prev.currentSong, song)) return prev;
+      if (prev.queue.some(queuedSong => isSameSong(queuedSong, song))) return prev;
+      return { ...prev, queue: [...prev.queue, song] };
+    });
   };
 
   const playNextInQueue = (song: Song) => {
-    setPlayback(prev => ({
-      ...prev,
-      queue: [song, ...prev.queue],
-    }));
+    setPlayback(prev => {
+      if (prev.currentSong && isSameSong(prev.currentSong, song)) return prev;
+      if (prev.queue.some(queuedSong => isSameSong(queuedSong, song))) return prev;
+      return { ...prev, queue: [song, ...prev.queue] };
+    });
   };
 
   const removeFromQueue = (index: number) => {
