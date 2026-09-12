@@ -324,7 +324,7 @@ export const DownloadsView: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 3: Windows Computer Installer (.msi) */}
+        {/* Card 3: Windows - Add to Desktop (PWA) */}
         <div className="p-6 rounded-2xl bg-zinc-900/70 border border-white/5 space-y-5 hover:border-white/10 transition flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -332,36 +332,61 @@ export const DownloadsView: React.FC = () => {
                 <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
                   <Monitor className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-white">התקנה למחשב (Windows MSI)</h3>
+                <h3 className="text-base font-bold text-white">מחשב Windows — הוסף לשולחן העבודה</h3>
               </div>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 font-semibold border border-blue-500/20">
                 Windows 10 / 11
               </span>
             </div>
             <p className="text-xs text-zinc-400 leading-relaxed">
-              קובץ התקנה רשמי (.msi) לשולחן העבודה. מתקין את פשוט מוזיקה כאפליקציית מחשב מהירה, עצמאית ונקייה.
+              בדיוק כמו אפליקציה רגילה — פתח בכרום או Edge, לחץ "התקן" ותקבל אייקון בשולחן העבודה שפותח חלון עצמאי.
             </p>
 
-            {/* PC Benefits */}
+            <div className="grid grid-cols-2 gap-2 text-[11px] text-zinc-300">
+              <div className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span>אייקון בשולחן העבודה</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span>חלון עצמאי ללא דפדפן</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span>ללא הורדת קבצים</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                <span>עדכונים אוטומטיים</span>
+              </div>
+            </div>
+
             <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1.5 text-[11px] text-zinc-400">
-              <div className="font-semibold text-white">יתרונות גרסת המחשב:</div>
-              <ul className="space-y-1">
-                <li>• פועלת עצמאית בחלון ייעודי משלה ללא דפדפן</li>
-                <li>• תמיכה במקשי מדיה במקלדת (Play, Pause, Next)</li>
-                <li>• אייקון בשורת המשימות ובשולחן העבודה</li>
-              </ul>
+              <div className="font-semibold text-white">איך מתקינים למחשב? (3 שניות)</div>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>פתח את האתר ב-<strong className="text-white">Chrome</strong> או <strong className="text-white">Edge</strong></li>
+                <li>לחץ על סמל <strong className="text-white">⊕</strong> בסרגל הכתובת (או 3 נקודות ← "התקן")</li>
+                <li>לחץ <strong className="text-white">"התקן"</strong> — אייקון יופיע מיד בשולחן העבודה!</li>
+              </ol>
             </div>
           </div>
 
-          <div className="pt-2">
-            <button
-              id="btn-download-msi-view"
-              onClick={handleDownloadMsi}
-              disabled={downloadingMsi}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white text-black hover:bg-zinc-200 text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
+          <div className="space-y-2 pt-2">
+            <a
+              href={siteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition shadow-sm cursor-pointer"
             >
-              <Download className="w-4 h-4" />
-              <span>{downloadingMsi ? 'מוריד התקנה...' : 'הורד התקנה לווינדוס (.msi)'}</span>
+              <Monitor className="w-4 h-4" />
+              <span>פתח לאינסטלציה במחשב</span>
+            </a>
+            <button
+              onClick={() => handleCopyLink(siteUrl)}
+              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-medium transition cursor-pointer border border-white/10"
+            >
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedLink ? 'הועתק!' : 'העתק קישור'}</span>
             </button>
           </div>
         </div>
