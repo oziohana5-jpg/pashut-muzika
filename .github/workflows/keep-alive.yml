@@ -13,6 +13,6 @@ jobs:
       - name: Ping Simply Music
         run: |
           echo "Pinging Simply Music to keep it alive..."
-          curl -s -o /dev/null -w "HTTP Status: %{http_code}" ${{ secrets.RENDER_URL || 'https://pashut-muzika.onrender.com' }}
+          curl -s -o /dev/null -w "HTTP Status: %{http_code}" https://pashut-muzika.onrender.com/
           echo ""
           echo "Ping sent at $(date)"
