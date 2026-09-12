@@ -1,0 +1,18 @@
+name: Keep Render Alive
+
+on:
+  schedule:
+    # Runs every 5 minutes - keeps Render free instance from sleeping
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Simply Music
+        run: |
+          echo "Pinging Simply Music to keep it alive..."
+          curl -s -o /dev/null -w "HTTP Status: %{http_code}" ${{ secrets.RENDER_URL || 'https://pashut-muzika.onrender.com' }}
+          echo ""
+          echo "Ping sent at $(date)"
