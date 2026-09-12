@@ -29,8 +29,8 @@ export const DownloadsView: React.FC = () => {
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // Short and memorable public link
-  const shortUrl = 'https://tinyurl.com/29fngsmq';
-  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://tinyurl.com/29fngsmq';
+  const shortUrl = 'https://pashut-muzika.onrender.com';
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://pashut-muzika.onrender.com';
 
   const handleCopyLink = (urlToCopy: string, isDirect: boolean = false) => {
     if (navigator.clipboard) {
