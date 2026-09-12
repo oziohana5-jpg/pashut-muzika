@@ -545,7 +545,38 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setSimilarSongs(remainingSimilar);
       playSong(nextSong, []);
     } else {
-      setPlayback(prev => ({ ...prev, isPlaying: false, currentTime: 0 }));
+      // No queue, no similar songs — fetch more related songs and keep playing
+      const currentSong = current.currentSong;
+      if (currentSong) {
+        fetch(
+          `/api/music/similar/${encodeURIComponent(currentSong.id)}?artist=${encodeURIComponent(currentSong.artistName || '')}&genre=${encodeURIComponent(currentSong.genre || '')}&title=${encodeURIComponent(currentSong.title || '')}`
+        )
+          .then(res => res.json())
+          .then(data => {
+            const tracks: Song[] = (data.similarTracks || []).filter(
+              (s: Song) => s.id !== currentSong.id
+            );
+            if (tracks.length > 0) {
+              // Shuffle for variety
+              const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+              playSong(shuffled[0], shuffled.slice(1));
+            } else {
+              // Last resort: replay history shuffled
+              const history = current.history;
+              if (history.length > 0) {
+                const shuffledHistory = [...history].sort(() => Math.random() - 0.5);
+                playSong(shuffledHistory[0], shuffledHistory.slice(1));
+              } else {
+                setPlayback(prev => ({ ...prev, isPlaying: false, currentTime: 0 }));
+              }
+            }
+          })
+          .catch(() => {
+            setPlayback(prev => ({ ...prev, isPlaying: false, currentTime: 0 }));
+          });
+      } else {
+        setPlayback(prev => ({ ...prev, isPlaying: false, currentTime: 0 }));
+      }
     }
   };
 
@@ -710,10 +741,22 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setSimilarSongs(remainingSimilar);
       playSong(nextSong, []);
     } else if (current.currentSong) {
-      // Rewind to beginning
-      seek(0);
-      pause();
-      setPlayback(prev => ({ ...prev, currentTime: 0, isPlaying: false }));
+      // No queue — fetch similar songs and play next
+      const currentSong = current.currentSong;
+      fetch(
+        `/api/music/similar/${encodeURIComponent(currentSong.id)}?artist=${encodeURIComponent(currentSong.artistName || '')}&genre=${encodeURIComponent(currentSong.genre || '')}`
+      )
+        .then(res => res.json())
+        .then(data => {
+          const tracks: Song[] = (data.similarTracks || []).filter(
+            (s: Song) => s.id !== currentSong.id
+          );
+          if (tracks.length > 0) {
+            const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+            playSong(shuffled[0], shuffled.slice(1));
+          }
+        })
+        .catch(() => {});
     }
   };
 
