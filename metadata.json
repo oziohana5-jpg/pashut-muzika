@@ -1,0 +1,8 @@
+{
+  "name": "Remix פשוט מוזיקה",
+  "description": "פלטפורמת הזרמת מוזיקה מתקדמת ומקצועית להשמעה באורך מלא ללא פרסומות\nיוצרים - עוז אוחנה\nמייל לעזרה - ozohana54366@gmail.com\n",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

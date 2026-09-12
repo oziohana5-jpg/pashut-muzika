@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Name="פשוט מוזיקה"
+           Language="1033"
+           Version="2.0.0"
+           Manufacturer="Simply Music"
+           UpgradeCode="6f3b879c-930a-4fa8-b21a-55447192bc51">
+    <Package Description="Simply Music Windows Installer"
+             Comments="פשוט מוזיקה - נגן המוזיקה המקצועי למחשב"
+             Manufacturer="Simply Music"
+             InstallerVersion="200"
+             Compressed="yes" />
+
+    <Media Id="1" Cabinet="simplymusic.cab" EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLDIR" Name="SimplyMusic">
+          <Component Id="MainExecutable" Guid="a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d">
+            <File Id="SimplyMusicEXE" Name="SimplyMusic.exe" Source="build_win/SimplyMusic.exe" KeyPath="yes">
+              <Shortcut Id="DesktopShortcut"
+                        Directory="DesktopFolder"
+                        Name="פשוט מוזיקה"
+                        WorkingDirectory="INSTALLDIR"
+                        Icon="AppIcon.ico"
+                        IconIndex="0"
+                        Advertise="yes" />
+              <Shortcut Id="StartMenuShortcut"
+                        Directory="ProgramMenuDir"
+                        Name="פשוט מוזיקה"
+                        WorkingDirectory="INSTALLDIR"
+                        Icon="AppIcon.ico"
+                        IconIndex="0"
+                        Advertise="yes" />
+            </File>
+            <File Id="SimplyMusicHTML" Name="simply-music.html" Source="public/simply-music.html" />
+            <File Id="SimplyMusicINI" Name="SimplyMusic.ini" Source="build_win/SimplyMusic.ini" />
+            <File Id="AppIconFile" Name="logo.ico" Source="public/logo.ico" />
+          </Component>
+        </Directory>
+      </Directory>
+
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ProgramMenuDir" Name="פשוט מוזיקה">
+          <Component Id="ProgramMenuDirComponent" Guid="f2e3d4c5-b6a7-8901-2345-6789abcdef01">
+            <RemoveFolder Id="ProgramMenuDir" On="uninstall" />
+            <RegistryValue Root="HKCU" Key="Software\SimplyMusic" Type="string" Value="" KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+
+    <Icon Id="AppIcon.ico" SourceFile="public/logo.ico" />
+
+    <Feature Id="Complete" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="ProgramMenuDirComponent" />
+    </Feature>
+  </Product>
+</Wix>
