@@ -50,6 +50,8 @@ interface PlayerContextType {
   autoplaySimilar: boolean;
   toggleAutoplaySimilar: () => void;
   addSimilarToQueue: (song: Song) => void;
+  getLiveTime: () => number;
+  ytPlayerRef: React.MutableRefObject<any>;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -621,12 +623,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     // Spotify Autoplay: automatically fetch similar tracks for this song
+    // Pass recently played IDs so server avoids repeating them
+    const recentIds = playbackRef.current.history.slice(0, 10).map(s => s.id).join(',');
     fetch(
       `/api/music/similar/${encodeURIComponent(targetSong.id)}?artist=${encodeURIComponent(
         targetSong.artistName || ''
       )}&genre=${encodeURIComponent(targetSong.genre || '')}&title=${encodeURIComponent(
         targetSong.title || ''
-      )}`
+      )}&recent=${encodeURIComponent(recentIds)}`
     )
       .then(res => res.json())
       .then(data => {
@@ -1046,6 +1050,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setEqualizerPreset('flat');
   };
 
+  // Expose live time directly from YT player (bypasses React render cycle)
+  const getLiveTime = (): number => {
+    if (activeEngineRef.current === 'youtube' && isYtReadyRef.current && ytPlayerRef.current) {
+      try {
+        const t = ytPlayerRef.current.getCurrentTime?.();
+        if (typeof t === 'number' && !isNaN(t)) return t;
+      } catch {}
+    }
+    if (audioRef.current) {
+      return audioRef.current.currentTime || 0;
+    }
+    return playbackRef.current.currentTime || 0;
+  };
+
   return (
     <PlayerContext.Provider
       value={{
@@ -1087,6 +1105,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         autoplaySimilar,
         toggleAutoplaySimilar,
         addSimilarToQueue,
+        getLiveTime,
+        ytPlayerRef,
       }}
     >
       {children}

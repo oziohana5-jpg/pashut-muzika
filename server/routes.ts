@@ -369,48 +369,17 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
     let targetGenre = currentSong?.genre || '';
     let targetTitle = currentSong?.title || '';
 
-    if (!targetArtistName && req.query.artist) {
-      targetArtistName = String(req.query.artist);
-    }
-    if (!targetGenre && req.query.genre) {
-      targetGenre = String(req.query.genre);
-    }
-    if (!targetTitle && req.query.title) {
-      targetTitle = String(req.query.title);
-    }
+    if (!targetArtistName && req.query.artist) targetArtistName = String(req.query.artist);
+    if (!targetGenre && req.query.genre) targetGenre = String(req.query.genre);
+    if (!targetTitle && req.query.title) targetTitle = String(req.query.title);
 
-    const candidateSongs: any[] = [];
+    // Accept recently played IDs from client to avoid repeats
+    const recentRaw = req.query.recent ? String(req.query.recent) : '';
+    const recentIds = new Set<string>(recentRaw ? recentRaw.split(',') : []);
+
     const seenIds = new Set<string>();
     if (currentSong) seenIds.add(currentSong.id);
 
-    // 1. Same artist tracks (different songs)
-    if (targetArtistName) {
-      const sameArtist = allSongs.filter(s =>
-        !seenIds.has(s.id) &&
-        s.artistName &&
-        (s.artistName.toLowerCase().includes(targetArtistName.toLowerCase()) ||
-         targetArtistName.toLowerCase().includes(s.artistName.toLowerCase()))
-      );
-      for (const s of sameArtist) {
-        seenIds.add(s.id);
-        candidateSongs.push(s);
-      }
-    }
-
-    // 2. Same genre tracks
-    if (targetGenre) {
-      const sameGenre = allSongs.filter(s =>
-        !seenIds.has(s.id) &&
-        s.genre &&
-        s.genre.toLowerCase() === targetGenre.toLowerCase()
-      );
-      for (const s of sameGenre.sort(() => 0.5 - Math.random())) {
-        seenIds.add(s.id);
-        candidateSongs.push(s);
-      }
-    }
-
-    // 3. Israeli / Mizrahi style context
     const israeliGenres = ['Mizrahi', 'Israeli Pop', 'Israeli Rock', 'Soul', 'Israeli Folk', 'Hip Hop', 'Rap', 'Mediterranean', 'Classic Israeli', 'Acoustic', 'Ballad', 'Folk'];
     const englishGenres = ['Alternative Rock', 'Pop Rock', 'Britpop', 'R&B', 'Synth-pop', 'Electronic Pop'];
 
@@ -419,48 +388,92 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
       /[\u0590-\u05FF]/.test(targetTitle);
     const isEnglishSong = englishGenres.includes(targetGenre) && !isIsraeliSong;
 
-    if (isIsraeliSong) {
-      const israeliSongs = allSongs.filter(s =>
-        !seenIds.has(s.id) &&
-        (israeliGenres.includes(s.genre) ||
-         /[\u0590-\u05FF]/.test(s.artistName || '') ||
-         /[\u0590-\u05FF]/.test(s.titleHe || s.title || ''))
-      );
-      for (const s of israeliSongs.sort(() => 0.5 - Math.random())) {
-        seenIds.add(s.id);
-        candidateSongs.push(s);
+    // Language filter helper
+    const matchesLanguage = (s: Song) => {
+      if (isIsraeliSong) {
+        return israeliGenres.includes(s.genre) ||
+          /[\u0590-\u05FF]/.test(s.artistName || '') ||
+          /[\u0590-\u05FF]/.test(s.titleHe || s.title || '');
       }
-    } else if (isEnglishSong) {
-      const englishSongs = allSongs.filter(s =>
-        !seenIds.has(s.id) && englishGenres.includes(s.genre)
+      if (isEnglishSong) {
+        return englishGenres.includes(s.genre) && !/[\u0590-\u05FF]/.test(s.artistName || '');
+      }
+      return true;
+    };
+
+    // Shuffle helper — uses a seed based on current time bucketed to 10s
+    // so each call within the same song gets same order, but next song gets different
+    const shuffleSeed = Math.floor(Date.now() / 10000);
+    const seededShuffle = <T>(arr: T[]): T[] => {
+      const a = [...arr];
+      let s = shuffleSeed;
+      for (let i = a.length - 1; i > 0; i--) {
+        s = (s * 1664525 + 1013904223) & 0xffffffff;
+        const j = Math.abs(s) % (i + 1);
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+
+    const pool: Song[] = [];
+
+    // 1. Same artist (shuffled) — show max 3 so queue feels varied
+    if (targetArtistName) {
+      const sameArtist = seededShuffle(
+        allSongs.filter(s =>
+          !seenIds.has(s.id) &&
+          matchesLanguage(s) &&
+          s.artistName &&
+          (s.artistName.toLowerCase().includes(targetArtistName.toLowerCase()) ||
+           targetArtistName.toLowerCase().includes(s.artistName.toLowerCase()))
+        )
+      ).slice(0, 3);
+      for (const s of sameArtist) { seenIds.add(s.id); pool.push(s); }
+    }
+
+    // 2. Same genre (different artist) — shuffled
+    if (targetGenre) {
+      const sameGenre = seededShuffle(
+        allSongs.filter(s =>
+          !seenIds.has(s.id) &&
+          matchesLanguage(s) &&
+          s.genre &&
+          s.genre.toLowerCase() === targetGenre.toLowerCase()
+        )
       );
-      for (const s of englishSongs.sort(() => 0.5 - Math.random())) {
+      for (const s of sameGenre) { seenIds.add(s.id); pool.push(s); }
+    }
+
+    // 3. Same language group — fill remaining slots
+    if (pool.length < 15) {
+      const langFill = seededShuffle(
+        allSongs.filter(s => !seenIds.has(s.id) && matchesLanguage(s))
+      );
+      for (const s of langFill) {
         seenIds.add(s.id);
-        candidateSongs.push(s);
+        pool.push(s);
+        if (pool.length >= 20) break;
       }
     }
 
-    // 4. Fill remaining — same language first
-    if (candidateSongs.length < 15) {
-      const filler = allSongs
-        .filter(s => !seenIds.has(s.id))
-        .filter(s => {
-          if (isIsraeliSong) return israeliGenres.includes(s.genre) || /[\u0590-\u05FF]/.test(s.artistName || '');
-          if (isEnglishSong) return englishGenres.includes(s.genre);
-          return true;
-        })
-        .sort(() => 0.5 - Math.random());
-      for (const s of filler) {
-        if (!seenIds.has(s.id)) { seenIds.add(s.id); candidateSongs.push(s); }
-        if (candidateSongs.length >= 20) break;
+    // 4. Last resort — any song
+    if (pool.length < 8) {
+      const fallback = seededShuffle(allSongs.filter(s => !seenIds.has(s.id)));
+      for (const s of fallback) {
+        pool.push(s);
+        if (pool.length >= 12) break;
       }
     }
 
-    const similarTracks = candidateSongs.slice(0, 12);
+    // Move recently played songs to the END so they don't come up immediately
+    const notRecent = pool.filter(s => !recentIds.has(s.id));
+    const recent = pool.filter(s => recentIds.has(s.id));
+    const ordered = [...notRecent, ...recent];
+
     res.json({
       success: true,
       currentSongId: songId,
-      similarTracks,
+      similarTracks: ordered.slice(0, 12),
     });
   } catch (err: any) {
     console.error('Similar songs error:', err);

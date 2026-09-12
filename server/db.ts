@@ -13,6 +13,7 @@ import {
   PlaybackSession,
   PlaybackLog,
   ProviderConfig,
+  AppUpdate,
 } from './types';
 
 interface DatabaseSchema {
@@ -27,6 +28,7 @@ interface DatabaseSchema {
   playbackSessions: Record<string, PlaybackSession>;
   playbackLogs: PlaybackLog[];
   providers: ProviderConfig[];
+  updates: AppUpdate[];
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -974,6 +976,7 @@ class Database {
           playbackSessions: parsed.playbackSessions || {},
           playbackLogs: parsed.playbackLogs || [],
           providers: parsed.providers || initialProviders,
+          updates: parsed.updates || [],
         };
       }
     } catch (err) {
@@ -999,6 +1002,7 @@ class Database {
       playbackSessions: {},
       playbackLogs: [],
       providers: [...initialProviders],
+      updates: [],
     };
   }
 
@@ -1334,6 +1338,34 @@ class Database {
     Object.assign(p, updates);
     this.save();
     return p;
+  }
+  // App Updates (admin-only write, public read)
+  public getUpdates(): AppUpdate[] {
+    return [...(this.data.updates || [])].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  public createUpdate(update: Omit<AppUpdate, 'id' | 'createdAt'>): AppUpdate {
+    const newUpdate: AppUpdate = {
+      id: `upd-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      createdAt: new Date().toISOString(),
+      ...update,
+    };
+    if (!this.data.updates) this.data.updates = [];
+    this.data.updates.unshift(newUpdate);
+    this.save();
+    return newUpdate;
+  }
+
+  public deleteUpdate(id: string): boolean {
+    const before = this.data.updates?.length || 0;
+    this.data.updates = (this.data.updates || []).filter(u => u.id !== id);
+    if (this.data.updates.length !== before) {
+      this.save();
+      return true;
+    }
+    return false;
   }
 }
 

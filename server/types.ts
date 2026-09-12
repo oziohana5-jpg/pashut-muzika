@@ -11,6 +11,15 @@ export interface User {
   updatedAt: string;
 }
 
+export interface AppUpdate {
+  id: string;
+  title: string;
+  body: string;
+  type: 'info' | 'feature' | 'fix' | 'important';
+  createdAt: string;
+  authorName: string;
+}
+
 export interface Artist {
   id: string;
   name: string;

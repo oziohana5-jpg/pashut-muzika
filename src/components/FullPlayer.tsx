@@ -59,6 +59,7 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
     toggleSleepTimerModal,
     setPlaybackRate,
     toggleVideoMode,
+    getLiveTime,
   } = usePlayer();
 
   const { t } = useLanguage();
@@ -142,14 +143,16 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
   }, [song?.id, song?.title, song?.titleHe]);
 
   // Find active lyric line index based on playback.currentTime
-  // High-frequency local time for smooth lyrics sync — runs independently every 50ms
+  // High-frequency local time for smooth lyrics sync — calls YT player directly, bypasses React render cycle
   const [localTime, setLocalTime] = useState(0);
-  const playbackRef2 = useRef(playback);
-  playbackRef2.current = playback;
+  const getLiveTimeRef = useRef(getLiveTime);
+  getLiveTimeRef.current = getLiveTime;
 
   useEffect(() => {
+    // 50ms = 20 times per second, smooth enough for lyrics
     const interval = setInterval(() => {
-      setLocalTime(playbackRef2.current.currentTime || 0);
+      const t = getLiveTimeRef.current();
+      setLocalTime(t);
     }, 50);
     return () => clearInterval(interval);
   }, []); // empty deps = runs forever independently
