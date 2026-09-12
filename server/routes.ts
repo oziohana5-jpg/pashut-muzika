@@ -1015,7 +1015,8 @@ apiRouter.get('/lyrics', async (req, res) => {
   }
 
   try {
-    // Check our verified authentic database first for instant 100% accurate match
+    // Keep the local lyrics as a fallback only. The same song can have different
+    // intros and timing, so a synchronized recording must be preferred first.
     const verified = getSongLyrics({
       id: '',
       title: songTitle,
@@ -1023,15 +1024,6 @@ apiRouter.get('/lyrics', async (req, res) => {
       artistName: songArtist,
       duration: songDuration,
     });
-    if (verified && verified.length > 0) {
-      res.json({
-        source: 'verified-authentic',
-        trackName: songTitle,
-        artistName: songArtist,
-        lyrics: verified,
-      });
-      return;
-    }
 
     // Clean track title: remove parenthesis, "- Single", "official video", "קליפ רשמי", etc.
     const cleanTitle = songTitle
@@ -1142,6 +1134,16 @@ apiRouter.get('/lyrics', async (req, res) => {
           return;
         }
       }
+    }
+
+    if (verified && verified.length > 0) {
+      res.json({
+        source: 'verified-fallback',
+        trackName: songTitle,
+        artistName: songArtist,
+        lyrics: verified,
+      });
+      return;
     }
 
     res.json({ source: 'none', lyrics: [] });
