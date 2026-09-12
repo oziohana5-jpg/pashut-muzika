@@ -364,24 +364,23 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, []);
 
-  // Poll YouTube playback time & duration accurately
+  // Poll YouTube playback time & duration accurately — always running
   useEffect(() => {
     const timer = setInterval(() => {
       if (activeEngineRef.current === 'youtube' && isYtReadyRef.current && ytPlayerRef.current) {
         try {
-          const time = ytPlayerRef.current.getCurrentTime?.() || 0;
-          const dur = ytPlayerRef.current.getDuration?.() || 0;
-          if (time > 0 || dur > 0) {
-            setPlayback(prev => {
-              if (!prev.currentSong) return prev;
-              const safeDur = dur > 0 ? dur : (prev.currentSong.duration || 0);
-              return {
-                ...prev,
-                currentTime: time,
-                duration: safeDur,
-              };
-            });
-          }
+          const time = ytPlayerRef.current.getCurrentTime?.() ?? 0;
+          const dur = ytPlayerRef.current.getDuration?.() ?? 0;
+          setPlayback(prev => {
+            if (!prev.currentSong) return prev;
+            const safeDur = dur > 0 ? dur : (prev.currentSong.duration || 0);
+            // Always update time even if 0 — so lyrics sync from second 0
+            return {
+              ...prev,
+              currentTime: time,
+              duration: safeDur,
+            };
+          });
         } catch {}
       }
     }, 100);

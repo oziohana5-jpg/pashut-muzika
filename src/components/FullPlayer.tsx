@@ -142,14 +142,17 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
   }, [song?.id, song?.title, song?.titleHe]);
 
   // Find active lyric line index based on playback.currentTime
-  // Local high-frequency time state for smooth lyrics sync (updates every 50ms)
+  // High-frequency local time for smooth lyrics sync — runs independently every 50ms
   const [localTime, setLocalTime] = useState(0);
+  const playbackRef2 = useRef(playback);
+  playbackRef2.current = playback;
+
   useEffect(() => {
     const interval = setInterval(() => {
-      setLocalTime(playback.currentTime || 0);
+      setLocalTime(playbackRef2.current.currentTime || 0);
     }, 50);
     return () => clearInterval(interval);
-  }, [playback.currentTime]);
+  }, []); // empty deps = runs forever independently
 
   // Add 0.3s lookahead so lyrics appear slightly before being sung
   const lyricTime = localTime + 0.3;
