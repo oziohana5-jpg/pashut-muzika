@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trash2, Play, Music, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, Trash2, Play, Music, Radio, ArrowUp, ArrowDown } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatTime } from '../utils/formatters';

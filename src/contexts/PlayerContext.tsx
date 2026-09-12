@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { EQUALIZER_PRESETS, EqualizerModal } from '../components/EqualizerModal';
 import { SleepTimerModal } from '../components/SleepTimerModal';
+import { getSongLyrics } from '../data/lyricsData';
 
 declare global {
   interface Window {
@@ -166,6 +167,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     addToQueue(song);
     setSimilarSongs(prev => prev.filter(s => s.id !== song.id));
   };
+
+  const getLyricsForRecommendation = (song: Song): string =>
+    (song.lyrics || getSongLyrics(song).map(line => line.text).join(' ')).slice(0, 12000);
 
   // Load and merge liked songs with server
   useEffect(() => {
@@ -630,7 +634,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         targetSong.artistName || ''
       )}&genre=${encodeURIComponent(targetSong.genre || '')}&title=${encodeURIComponent(
         targetSong.title || ''
-      )}&recent=${encodeURIComponent(recentIds)}`
+      )}&lyrics=${encodeURIComponent(getLyricsForRecommendation(targetSong))}&recent=${encodeURIComponent(recentIds)}`
     )
       .then(res => res.json())
       .then(data => {

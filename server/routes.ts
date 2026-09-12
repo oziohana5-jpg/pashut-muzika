@@ -368,6 +368,7 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
     let targetArtistName = currentSong?.artistName || '';
     let targetGenre = currentSong?.genre || '';
     let targetTitle = currentSong?.title || '';
+    const targetLyrics = currentSong?.lyrics || String(req.query.lyrics || '');
 
     if (!targetArtistName && req.query.artist) targetArtistName = String(req.query.artist);
     if (!targetGenre && req.query.genre) targetGenre = String(req.query.genre);
@@ -429,50 +430,63 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
 
     const pool: Song[] = [];
 
-    // 1. Same artist (shuffled) — show max 3 so queue feels varied
-    if (targetArtistName) {
-      const sameArtist = seededShuffle(
-        allSongs.filter(s =>
-          !seenIds.has(s.id) &&
-          matchesLanguage(s) &&
-          s.artistName &&
-          (s.artistName.toLowerCase().includes(targetArtistName.toLowerCase()) ||
-           targetArtistName.toLowerCase().includes(s.artistName.toLowerCase()))
-        )
-      ).slice(0, 3);
-      for (const s of sameArtist) { seenIds.add(s.id); pool.push(s); }
+    // Rank the whole catalog instead of matching only the first word of a title.
+    // This also works for Hebrew and gracefully falls back when lyrics are missing.
+    const tokenize = (value: string): Set<string> => new Set(
+      value
+        .normalize('NFKC')
+        .toLocaleLowerCase()
+        .replace(/[\u0591-\u05C7]/g, '')
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .split(/\s+/)
+        .filter(word => word.length > 1)
+    );
+    const overlap = (left: Set<string>, right: Set<string>): number => {
+      if (!left.size || !right.size) return 0;
+      let matches = 0;
+      left.forEach(word => { if (right.has(word)) matches += 1; });
+      return matches / Math.max(left.size, right.size);
+    };
+
+    const targetTitleWords = tokenize(targetTitle);
+    const targetLyricsWords = tokenize(targetLyrics);
+    const targetArtist = targetArtistName.toLocaleLowerCase();
+    const targetGenreValue = targetGenre.toLocaleLowerCase();
+    const targetAlbum = (currentSong?.albumName || '').toLocaleLowerCase();
+
+    const ranked = allSongs
+      .filter(s => !seenIds.has(s.id) && matchesLanguage(s))
+      .map(song => {
+        const songTitle = `${song.title || ''} ${song.titleHe || ''}`;
+        const songArtist = (song.artistName || '').toLocaleLowerCase();
+        const songGenre = (song.genre || '').toLocaleLowerCase();
+        const songAlbum = (song.albumName || '').toLocaleLowerCase();
+        let score = 0;
+
+        score += overlap(targetTitleWords, tokenize(songTitle)) * 42;
+        score += overlap(targetLyricsWords, tokenize(song.lyrics || '')) * 20;
+        if (targetArtist && songArtist && (songArtist === targetArtist || songArtist.includes(targetArtist) || targetArtist.includes(songArtist))) score += 28;
+        if (targetGenreValue && songGenre === targetGenreValue) score += 24;
+        if (targetGenreValue && songGenre && (songGenre.includes(targetGenreValue) || targetGenreValue.includes(songGenre))) score += 10;
+        if (targetAlbum && songAlbum && (songAlbum === targetAlbum || songAlbum.includes(targetAlbum) || targetAlbum.includes(songAlbum))) score += 8;
+
+        // Small deterministic variation prevents ties from producing the same queue.
+        score += (Math.abs(song.id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) + shuffleSeed) % 100) / 1000;
+        return { song, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    for (const { song } of ranked) {
+      seenIds.add(song.id);
+      pool.push(song);
+      if (pool.length >= 20) break;
     }
 
-    // 2. Same genre (different artist) — shuffled
-    if (targetGenre) {
-      const sameGenre = seededShuffle(
-        allSongs.filter(s =>
-          !seenIds.has(s.id) &&
-          matchesLanguage(s) &&
-          s.genre &&
-          s.genre.toLowerCase() === targetGenre.toLowerCase()
-        )
-      );
-      for (const s of sameGenre) { seenIds.add(s.id); pool.push(s); }
-    }
-
-    // 3. Same language group — fill remaining slots
-    if (pool.length < 15) {
-      const langFill = seededShuffle(
-        allSongs.filter(s => !seenIds.has(s.id) && matchesLanguage(s))
-      );
-      for (const s of langFill) {
-        seenIds.add(s.id);
-        pool.push(s);
-        if (pool.length >= 20) break;
-      }
-    }
-
-    // 4. Last resort — any song
-    if (pool.length < 8) {
-      const fallback = seededShuffle(allSongs.filter(s => !seenIds.has(s.id)));
-      for (const s of fallback) {
-        pool.push(s);
+    // If the language-filtered catalog is small, fill the remaining slots globally.
+    if (pool.length < 12) {
+      for (const song of seededShuffle(allSongs.filter(s => !seenIds.has(s.id)))) {
+        seenIds.add(song.id);
+        pool.push(song);
         if (pool.length >= 12) break;
       }
     }
