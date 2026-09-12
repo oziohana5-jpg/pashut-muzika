@@ -157,8 +157,8 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
     return () => clearInterval(interval);
   }, []); // empty deps = runs forever independently
 
-  // Add 0.3s lookahead so lyrics appear slightly before being sung
-  const lyricTime = localTime + 0.3;
+  // Use the player clock directly so the highlighted line matches the audio position.
+  const lyricTime = localTime;
   const activeLyricIndex = lyrics.reduce((acc, line, idx) => {
     if (lyricTime >= line.time) {
       return idx;

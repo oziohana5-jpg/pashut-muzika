@@ -1058,8 +1058,42 @@ apiRouter.get('/lyrics', async (req, res) => {
       songTitle,
     ];
 
+    const normalizeMatchText = (value: string): string => value
+      .toLocaleLowerCase()
+      .normalize('NFKC')
+      .replace(/[\u0591-\u05C7]/g, '')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim();
+
+    const requestedTitle = normalizeMatchText(cleanTitle);
+    const requestedArtist = normalizeMatchText(songArtist);
+    const isMatchingTrack = (item: any): boolean => {
+      const itemTitle = normalizeMatchText(String(item.trackName || item.name || ''));
+      const itemArtist = normalizeMatchText(String(item.artistName || item.artist || ''));
+      const titleMatches = itemTitle === requestedTitle || itemTitle.includes(requestedTitle) || requestedTitle.includes(itemTitle);
+      const artistMatches = !requestedArtist || itemArtist === requestedArtist || itemArtist.includes(requestedArtist) || requestedArtist.includes(itemArtist);
+      const durationMatches = !item.duration || Math.abs(Number(item.duration) - songDuration) <= 12;
+      return titleMatches && artistMatches && durationMatches;
+    };
+
     let foundLrc: any = null;
+
+    // Prefer LRCLIB's exact lookup so a cover, remix, or different recording is not selected.
+    try {
+      const exactResp = await fetch(
+        `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(songArtist)}&duration=${encodeURIComponent(String(songDuration))}`,
+        { headers: { 'User-Agent': 'SimplyMusicApp/1.0' } }
+      );
+      if (exactResp.ok) {
+        const exact = await exactResp.json();
+        if (exact?.syncedLyrics && isMatchingTrack(exact)) foundLrc = exact;
+      }
+    } catch (err) {
+      // Fall back to the scored search below.
+    }
+
     for (const q of searchQueries) {
+      if (foundLrc) break;
       if (!q.trim()) continue;
       try {
         const resp = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(q.trim())}`, {
@@ -1068,7 +1102,9 @@ apiRouter.get('/lyrics', async (req, res) => {
         if (resp.ok) {
           const data: any = await resp.json();
           if (Array.isArray(data) && data.length > 0) {
-            const withLyrics = data.find((item: any) => item.syncedLyrics || item.plainLyrics);
+            const withLyrics = data
+              .filter((item: any) => (item.syncedLyrics || item.plainLyrics) && isMatchingTrack(item))
+              .sort((a: any, b: any) => Number(Boolean(b.syncedLyrics)) - Number(Boolean(a.syncedLyrics)))[0];
             if (withLyrics) {
               foundLrc = withLyrics;
               break;
