@@ -401,6 +401,18 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
       return true;
     };
 
+    // Helper: clean a title to its "base" form for deduplication
+    // Strips "(Remix)", "[Live]", "(Baila)", "(Instrumental)", "(Acappella)", feat. etc.
+    const baseTitle = (title: string): string =>
+      title
+        .replace(/\(.*?\)/g, '')
+        .replace(/\[.*?\]/g, '')
+        .replace(/\s*-\s*(remix|live|acoustic|instrumental|acappella|baila|version|edit|single|radio|cover|official|audio|video)\b.*/gi, '')
+        .replace(/\s+feat\..*$/i, '')
+        .replace(/\s+ft\..*$/i, '')
+        .trim()
+        .toLowerCase();
+
     // Shuffle helper — uses a seed based on current time bucketed to 10s
     // so each call within the same song gets same order, but next song gets different
     const shuffleSeed = Math.floor(Date.now() / 10000);
@@ -470,10 +482,19 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
     const recent = pool.filter(s => recentIds.has(s.id));
     const ordered = [...notRecent, ...recent];
 
+    // Deduplicate by base title — keep only the first (highest priority) version
+    const seenBaseTitles = new Set<string>();
+    const deduplicated = ordered.filter(s => {
+      const base = baseTitle(s.title);
+      if (seenBaseTitles.has(base)) return false;
+      seenBaseTitles.add(base);
+      return true;
+    });
+
     res.json({
       success: true,
       currentSongId: songId,
-      similarTracks: ordered.slice(0, 12),
+      similarTracks: deduplicated.slice(0, 12),
     });
   } catch (err: any) {
     console.error('Similar songs error:', err);

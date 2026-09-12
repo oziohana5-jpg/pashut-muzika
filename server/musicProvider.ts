@@ -177,8 +177,11 @@ export async function searchYouTubeTracks(query: string): Promise<Song[]> {
         const durationText = v.lengthText?.simpleText || '3:30';
         const parts = durationText.split(':').map(Number);
         const durationSec = parts.length === 2 ? parts[0] * 60 + parts[1] : (parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : 210);
-        // Exclude playlists / mix loops over 15 minutes
+        // Exclude playlists / mix loops over 15 minutes, and duplicate versions (Remix, Live, Instrumental etc.)
         if (durationSec > 900) continue;
+        const lowerTitle = title.toLowerCase();
+        const isDuplicate = /\b(remix|live|acoustic|instrumental|acappella|baila|karaoke|cover|version)\b/i.test(lowerTitle);
+        if (isDuplicate) continue;
 
         const thumb = v.thumbnail?.thumbnails?.[v.thumbnail.thumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`;
         const song: Song = {
