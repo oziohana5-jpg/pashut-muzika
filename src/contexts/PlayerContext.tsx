@@ -384,7 +384,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
         } catch {}
       }
-    }, 400);
+    }, 100);
 
     return () => clearInterval(timer);
   }, []);

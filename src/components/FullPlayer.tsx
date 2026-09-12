@@ -142,8 +142,10 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
   }, [song?.id, song?.title, song?.titleHe]);
 
   // Find active lyric line index based on playback.currentTime
+  // Add 0.3s lookahead so lyrics appear slightly before being sung
+  const lyricTime = (playback.currentTime || 0) + 0.3;
   const activeLyricIndex = lyrics.reduce((acc, line, idx) => {
-    if (playback.currentTime >= line.time) {
+    if (lyricTime >= line.time) {
       return idx;
     }
     return acc;
