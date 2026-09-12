@@ -463,11 +463,11 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
         const songAlbum = (song.albumName || '').toLocaleLowerCase();
         let score = 0;
 
-        score += overlap(targetTitleWords, tokenize(songTitle)) * 42;
-        score += overlap(targetLyricsWords, tokenize(song.lyrics || '')) * 20;
-        if (targetArtist && songArtist && (songArtist === targetArtist || songArtist.includes(targetArtist) || targetArtist.includes(songArtist))) score += 28;
-        if (targetGenreValue && songGenre === targetGenreValue) score += 24;
-        if (targetGenreValue && songGenre && (songGenre.includes(targetGenreValue) || targetGenreValue.includes(songGenre))) score += 10;
+        score += overlap(targetTitleWords, tokenize(songTitle)) * 32;
+        score += overlap(targetLyricsWords, tokenize(song.lyrics || '')) * 24;
+        if (targetArtist && songArtist && (songArtist === targetArtist || songArtist.includes(targetArtist) || targetArtist.includes(songArtist))) score += 12;
+        if (targetGenreValue && songGenre === targetGenreValue) score += 30;
+        if (targetGenreValue && songGenre && (songGenre.includes(targetGenreValue) || targetGenreValue.includes(songGenre))) score += 14;
         if (targetAlbum && songAlbum && (songAlbum === targetAlbum || songAlbum.includes(targetAlbum) || targetAlbum.includes(songAlbum))) score += 8;
 
         // Small deterministic variation prevents ties from producing the same queue.
@@ -476,17 +476,32 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
       })
       .sort((a, b) => b.score - a.score);
 
+    const selectedArtists = new Map<string, number>();
+    const selectedBaseTitles = new Set<string>();
+    const artistKey = (song: Song): string => (song.artistName || song.artistId || '').trim().toLocaleLowerCase();
+
+    // Keep the queue diverse: a strong artist match should not crowd out every other artist.
     for (const { song } of ranked) {
+      const key = artistKey(song);
+      const base = baseTitle(song.title);
+      if (selectedBaseTitles.has(base) || (key && (selectedArtists.get(key) || 0) >= 3)) continue;
       seenIds.add(song.id);
       pool.push(song);
+      selectedBaseTitles.add(base);
+      if (key) selectedArtists.set(key, (selectedArtists.get(key) || 0) + 1);
       if (pool.length >= 20) break;
     }
 
     // If the language-filtered catalog is small, fill the remaining slots globally.
     if (pool.length < 12) {
       for (const song of seededShuffle(allSongs.filter(s => !seenIds.has(s.id)))) {
+        const key = artistKey(song);
+        const base = baseTitle(song.title);
+        if (selectedBaseTitles.has(base) || (key && (selectedArtists.get(key) || 0) >= 3)) continue;
         seenIds.add(song.id);
         pool.push(song);
+        selectedBaseTitles.add(base);
+        if (key) selectedArtists.set(key, (selectedArtists.get(key) || 0) + 1);
         if (pool.length >= 12) break;
       }
     }
