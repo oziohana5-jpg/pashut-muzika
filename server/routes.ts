@@ -411,28 +411,48 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
     }
 
     // 3. Israeli / Mizrahi style context
-    const israeliPopularArtists = ['עומר אדם', 'אייל גולן', 'עדן בן זקן', 'אושר כהן', 'איתי לוי', 'חנן בן ארי', 'פאר טסי', 'עדן חסון', 'סטטיק', 'נועה קירל'];
-    const isIsraeliContext = israeliPopularArtists.some(a => targetArtistName.includes(a)) || targetGenre === 'Mizrahi' || targetGenre === 'Israeli Pop';
+    const israeliGenres = ['Mizrahi', 'Israeli Pop', 'Israeli Rock', 'Soul', 'Israeli Folk', 'Hip Hop', 'Rap', 'Mediterranean', 'Classic Israeli', 'Acoustic', 'Ballad', 'Folk'];
+    const englishGenres = ['Alternative Rock', 'Pop Rock', 'Britpop', 'R&B', 'Synth-pop', 'Electronic Pop'];
 
-    if (isIsraeliContext) {
+    const isIsraeliSong = israeliGenres.includes(targetGenre) ||
+      /[\u0590-\u05FF]/.test(targetArtistName) ||
+      /[\u0590-\u05FF]/.test(targetTitle);
+    const isEnglishSong = englishGenres.includes(targetGenre) && !isIsraeliSong;
+
+    if (isIsraeliSong) {
       const israeliSongs = allSongs.filter(s =>
         !seenIds.has(s.id) &&
-        (israeliPopularArtists.some(a => s.artistName?.includes(a)) || s.genre === 'Mizrahi')
+        (israeliGenres.includes(s.genre) ||
+         /[\u0590-\u05FF]/.test(s.artistName || '') ||
+         /[\u0590-\u05FF]/.test(s.titleHe || s.title || ''))
       );
       for (const s of israeliSongs.sort(() => 0.5 - Math.random())) {
         seenIds.add(s.id);
         candidateSongs.push(s);
       }
+    } else if (isEnglishSong) {
+      const englishSongs = allSongs.filter(s =>
+        !seenIds.has(s.id) && englishGenres.includes(s.genre)
+      );
+      for (const s of englishSongs.sort(() => 0.5 - Math.random())) {
+        seenIds.add(s.id);
+        candidateSongs.push(s);
+      }
     }
 
-    // 4. Fill from general high-quality tracks if still small
-    if (candidateSongs.length < 12) {
-      for (const s of allSongs.sort(() => 0.5 - Math.random())) {
-        if (!seenIds.has(s.id)) {
-          seenIds.add(s.id);
-          candidateSongs.push(s);
-        }
-        if (candidateSongs.length >= 15) break;
+    // 4. Fill remaining — same language first
+    if (candidateSongs.length < 15) {
+      const filler = allSongs
+        .filter(s => !seenIds.has(s.id))
+        .filter(s => {
+          if (isIsraeliSong) return israeliGenres.includes(s.genre) || /[\u0590-\u05FF]/.test(s.artistName || '');
+          if (isEnglishSong) return englishGenres.includes(s.genre);
+          return true;
+        })
+        .sort(() => 0.5 - Math.random());
+      for (const s of filler) {
+        if (!seenIds.has(s.id)) { seenIds.add(s.id); candidateSongs.push(s); }
+        if (candidateSongs.length >= 20) break;
       }
     }
 
