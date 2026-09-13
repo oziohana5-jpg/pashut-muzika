@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { db, hashPassword, verifyPassword } from './db';
-import { musicService, resolveYouTubeForTrack } from './musicProvider';
+import { defaultMusicProvider, musicService, resolveYouTubeForTrack } from './musicProvider';
 import {
   AuthenticatedRequest,
   generateToken,
