@@ -133,9 +133,9 @@ export const QueueModal: React.FC = () => {
 
             {queue.length === 0 ? (
               <div className="text-center py-6 border border-dashed border-white/10 rounded-xl text-zinc-400 text-xs bg-white/[0.02]">
-                <p>אין שירים ממתינים בתור ידני.</p>
+                <p>אין שירים ממתינים בתור.</p>
                 <p className="text-[11px] text-zinc-500 mt-1">
-                  השירים הדומים למטה יתנגנו אוטומטית בסיום השיר כמו בספוטיפיי!
+                  התור מתמלא אוטומטית בשירים קשורים לפי סגנון, מילים וזמר.
                 </p>
               </div>
             ) : (

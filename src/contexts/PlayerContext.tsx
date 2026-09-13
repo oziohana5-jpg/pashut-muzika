@@ -103,7 +103,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       shuffle: savedShuffle,
       repeat: savedRepeat,
       playbackRate: 1,
-      queue: [],
+      queue: (() => {
+        try {
+          const savedQueue = JSON.parse(localStorage.getItem('simply_music_queue') || '[]');
+          return Array.isArray(savedQueue) ? savedQueue : [];
+        } catch {
+          return [];
+        }
+      })(),
       history: [],
       isBuffering: false,
       error: null,
@@ -217,6 +224,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     const audio = new Audio();
     audio.preload = 'auto';
+    audio.autoplay = false;
+    audio.setAttribute('playsinline', 'true');
     audioRef.current = audio;
 
     const handleTimeUpdate = () => {
@@ -304,6 +313,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Ref to always have latest playback state in event handlers
   const playbackRef = useRef(playback);
   playbackRef.current = playback;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('simply_music_queue', JSON.stringify(playback.queue));
+    } catch {}
+  }, [playback.queue]);
 
   // Initialize YouTube IFrame API
   useEffect(() => {
@@ -666,11 +681,26 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           // Filter out current song
           const filtered = data.similarTracks.filter((s: Song) => !isSameSong(s, targetSong));
           setSimilarSongs(filtered);
+          setPlayback(prev => {
+            if (prev.currentSong?.id !== targetSong.id) return prev;
+            const existing = [targetSong, ...prev.queue];
+            const recommendations = filtered.filter((song: Song) =>
+              !existing.some(existingSong => isSameSong(existingSong, song))
+            );
+            return { ...prev, queue: [...prev.queue, ...recommendations] };
+          });
         }
       })
       .catch(() => {});
 
-    if (targetSong.youtubeId) {
+    const hasDirectAudio = Boolean(targetSong.streamUrl && targetSong.provider !== 'youtube');
+
+    if (hasDirectAudio && audioRef.current) {
+      activeEngineRef.current = 'audio';
+      audioRef.current.src = targetSong.streamUrl;
+      audioRef.current.load();
+      audioRef.current.play().catch(console.warn);
+    } else if (targetSong.youtubeId) {
       startYtPlayback(targetSong.youtubeId);
     } else {
       activeEngineRef.current = 'youtube';
@@ -819,7 +849,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const seek = (seconds: number) => {
-    const safeTime = Math.max(0, Math.min(seconds, playback.duration || 3600));
+    const currentPlayback = playbackRef.current;
+    const safeTime = Math.max(0, Math.min(seconds, currentPlayback.duration || 3600));
     if (activeEngineRef.current === 'youtube' && ytPlayerRef.current && isYtReadyRef.current) {
       try {
         ytPlayerRef.current.seekTo(safeTime, true);
