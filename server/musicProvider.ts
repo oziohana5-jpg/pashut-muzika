@@ -593,12 +593,16 @@ export class LicensedCatalogProvider implements MusicProvider {
 
     if (!song) return null;
 
+    // iTunes only exposes short promotional previews. Never advertise those
+    // previews as full-length streams or use them for background playback.
+    const isPreviewOnly = song.id.startsWith('itunes-');
+
     // Direct authorized audio stream
     return {
       streamUrl: song.streamUrl,
       format: song.audioFormat,
       bitrate: song.bitrate,
-      isFullLength: true,
+      isFullLength: Boolean(song.streamUrl) && !isPreviewOnly && song.isFullLength,
       authorized: true,
       license: song.licenseInfo,
       sourceProvider: this.id,
