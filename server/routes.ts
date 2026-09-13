@@ -237,7 +237,16 @@ apiRouter.delete('/auth/account', requireAuth, (req: AuthenticatedRequest, res) 
 apiRouter.get('/stream/:trackId', async (req, res) => {
   const { trackId } = req.params;
   const provider = musicService.getActiveProvider();
-  const streamInfo = await provider.getStream(trackId);
+  const song = db.getSongById(trackId);
+  const streamInfo = await provider.getStream(trackId) || (song?.streamUrl ? {
+    streamUrl: song.streamUrl,
+    format: song.audioFormat,
+    bitrate: song.bitrate,
+    isFullLength: song.isFullLength,
+    authorized: true,
+    license: song.licenseInfo,
+    sourceProvider: song.provider,
+  } : null);
 
   if (!streamInfo || !streamInfo.streamUrl) {
     db.logPlayback({
