@@ -549,7 +549,7 @@ apiRouter.get('/music/home', async (req: AuthenticatedRequest, res) => {
   const providerSongs = activeProvider.id === 'jamendo_legal'
     ? (await activeProvider.search('')).songs
     : [];
-  const allSongs = activeProvider.id === 'jamendo_legal'
+  const allSongs = activeProvider.id === 'jamendo_legal' && providerSongs.length > 0
     ? providerSongs
     : db.getSongs();
   const allArtists = db.getArtists();
