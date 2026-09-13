@@ -654,6 +654,19 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       };
     });
 
+    // Never leave the player in an endless buffering state when an external
+    // provider or mobile network stops responding.
+    const bufferingWatchdog = window.setTimeout(() => {
+      if (playbackRef.current.currentSong?.id === targetSong.id && playbackRef.current.isBuffering) {
+        setPlayback(prev => ({
+          ...prev,
+          isPlaying: false,
+          isBuffering: false,
+          error: t('songUnavailable'),
+        }));
+      }
+    }, 12000);
+
     const startYtPlayback = (ytId: string) => {
       activeEngineRef.current = 'youtube';
       if (audioRef.current) {
@@ -727,9 +740,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } else {
       // Existing catalog songs may not have a direct URL. Resolve them through
       // Jamendo instead of silently falling back to a YouTube iframe.
-      fetch(`/api/music/search?q=${encodeURIComponent(`${targetSong.title} ${targetSong.artistName}`)}&filter=songs`)
+      const controller = new AbortController();
+      const resolveTimeout = window.setTimeout(() => controller.abort(), 9000);
+      fetch(`/api/music/search?q=${encodeURIComponent(`${targetSong.title} ${targetSong.artistName}`)}&filter=songs`, {
+        signal: controller.signal,
+      })
         .then(res => res.json())
         .then(data => {
+          window.clearTimeout(resolveTimeout);
           const directMatch = (data.songs || []).find((candidate: Song) =>
             candidate.provider === 'jamendo_legal' &&
             Boolean(candidate.streamUrl) &&
@@ -747,6 +765,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }));
         })
         .catch(() => {
+          window.clearTimeout(resolveTimeout);
           setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
         });
     }
