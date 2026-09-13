@@ -92,7 +92,12 @@ async function fetchJamendoTracks(params: Record<string, string>): Promise<Song[
   });
 
   try {
-    const response = await fetch(`${JAMENDO_API}/tracks/?${query.toString()}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const response = await fetch(`${JAMENDO_API}/tracks/?${query.toString()}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
     if (!response.ok) return [];
     const data = await response.json() as { results?: JamendoTrack[] };
     return (data.results || []).map(mapJamendoTrack).filter((song): song is Song => Boolean(song));
