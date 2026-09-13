@@ -662,7 +662,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         history: updatedHistory,
         queue: cleanQueue,
         isFullPlayerOpen: true,
-        isVideoMode: isMobilePlayback && Boolean(targetSong.youtubeId) ? true : prev.isVideoMode,
+        isVideoMode: false,
       };
     });
 
@@ -740,10 +740,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const isPreviewOnlyStream = targetSong.id.startsWith('itunes-') || !targetSong.isFullLength;
     const hasDirectAudio = Boolean(
       targetSong.streamUrl &&
-      !targetSong.youtubeId &&
       !isPreviewOnlyStream &&
-      targetSong.provider !== 'youtube' &&
-      !isPlaceholderStream
+      targetSong.provider !== 'youtube'
     );
 
     if (hasDirectAudio && audioRef.current) {
