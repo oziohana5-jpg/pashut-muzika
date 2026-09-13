@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bell, Check, ExternalLink } from 'lucide-react';
-import { AppUpdate, ActiveTab } from '../types';
+import { AppUpdate, ActiveTab, Song } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface UpdateNotificationsProps {
@@ -9,10 +9,12 @@ interface UpdateNotificationsProps {
 
 const READ_UPDATES_KEY = 'simply_music_read_updates';
 const NOTIFICATION_ENABLED_KEY = 'simply_music_browser_notifications';
+const SEEN_RELEASES_KEY = 'simply_music_seen_releases';
 
 export const UpdateNotifications: React.FC<UpdateNotificationsProps> = ({ onNavigateTab }) => {
   const { language } = useLanguage();
   const [updates, setUpdates] = useState<AppUpdate[]>([]);
+  const [releases, setReleases] = useState<Song[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(() =>
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
@@ -25,14 +27,21 @@ export const UpdateNotifications: React.FC<UpdateNotificationsProps> = ({ onNavi
     }
   });
   const knownIdsRef = useRef<Set<string> | null>(null);
+  const knownReleaseIdsRef = useRef<Set<string> | null>(null);
 
   const loadUpdates = async () => {
     try {
-      const response = await fetch('/api/updates', { cache: 'no-store' });
-      if (!response.ok) return;
-      const data = await response.json() as { updates?: AppUpdate[] };
+      const [updatesResponse, homeResponse] = await Promise.all([
+        fetch('/api/updates', { cache: 'no-store' }),
+        fetch('/api/music/home', { cache: 'no-store' }),
+      ]);
+      if (!updatesResponse.ok) return;
+      const data = await updatesResponse.json() as { updates?: AppUpdate[] };
+      const homeData = homeResponse.ok ? await homeResponse.json() as { newReleases?: Song[] } : {};
       const nextUpdates = Array.isArray(data.updates) ? data.updates : [];
+      const nextReleases = Array.isArray(homeData.newReleases) ? homeData.newReleases : [];
       const nextIds = new Set(nextUpdates.map((update) => update.id));
+      const nextReleaseIds = new Set(nextReleases.map((release) => release.id));
 
       if (knownIdsRef.current) {
         nextUpdates
@@ -53,8 +62,32 @@ export const UpdateNotifications: React.FC<UpdateNotificationsProps> = ({ onNavi
         localStorage.setItem(READ_UPDATES_KEY, JSON.stringify(initialIds));
       }
 
+      if (knownReleaseIdsRef.current) {
+        nextReleases
+          .filter((release) => !knownReleaseIdsRef.current?.has(release.id))
+          .slice(0, 3)
+          .forEach((release) => {
+            if (permission === 'granted') {
+              new Notification(language === 'he' ? 'שיר חדש בפשוט מוזיקה' : 'New release on Simply Music', {
+                body: `${release.titleHe || release.title} · ${release.artistName}`,
+                icon: release.coverUrl || '/icon-192.png',
+                tag: `release-${release.id}`,
+              });
+            }
+          });
+      } else {
+        try {
+          const savedReleaseIds = JSON.parse(localStorage.getItem(SEEN_RELEASES_KEY) || '[]') as string[];
+          knownReleaseIdsRef.current = new Set(savedReleaseIds.length ? savedReleaseIds : nextReleases.map((release) => release.id));
+        } catch {
+          knownReleaseIdsRef.current = nextReleaseIds;
+        }
+      }
+      localStorage.setItem(SEEN_RELEASES_KEY, JSON.stringify(Array.from(nextReleaseIds)));
+
       knownIdsRef.current = nextIds;
       setUpdates(nextUpdates);
+      setReleases(nextReleases);
     } catch {
       // Notifications should never interrupt the music experience.
     }
@@ -107,6 +140,10 @@ export const UpdateNotifications: React.FC<UpdateNotificationsProps> = ({ onNavi
           </div>
 
           <div className="max-h-72 overflow-y-auto">
+            {releases.slice(0, 3).map((release) => <button key={`release-${release.id}`} onClick={() => { setIsOpen(false); onNavigateTab('home'); }} className="block w-full border-b border-white/5 px-4 py-3 text-start transition hover:bg-white/5">
+              <p className="truncate text-xs font-bold text-white">{language === 'he' ? 'שיר חדש' : 'New release'} · {release.artistName}</p>
+              <p className="mt-1 line-clamp-1 text-[11px] leading-5 text-zinc-400">{release.titleHe || release.title}</p>
+            </button>)}
             {updates.slice(0, 5).map((update) => <button key={update.id} onClick={() => { markAllRead(); setIsOpen(false); onNavigateTab('updates'); }} className="block w-full border-b border-white/5 px-4 py-3 text-start transition hover:bg-white/5">
               <p className="truncate text-xs font-bold text-white">{update.title}</p>
               <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-zinc-400">{update.body}</p>
