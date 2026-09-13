@@ -137,7 +137,7 @@ const MainApp: React.FC = () => {
   return (
     <div
       dir={direction}
-      className="flex h-screen bg-[#0a0b0e] text-zinc-100 overflow-hidden font-sans"
+      className="flex h-screen bg-[#f5f6f8] text-slate-900 overflow-hidden font-sans"
     >
       {/* Desktop Sidebar */}
       <Sidebar

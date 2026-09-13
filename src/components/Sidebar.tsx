@@ -48,22 +48,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       id="desktop-sidebar"
-      className="hidden md:flex flex-col w-64 bg-[#0a0b0f] border-e border-white/5 h-screen shrink-0 text-white select-none z-30"
+      className="hidden md:flex flex-col w-64 bg-white border-e border-slate-200 h-screen shrink-0 text-slate-900 select-none z-30"
     >
       {/* Brand Header */}
-      <div className="p-6 pb-4 flex items-center justify-between border-b border-white/5">
+      <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-200">
         <div
           onClick={() => onNavigateTab('home')}
           className="flex items-center gap-3 cursor-pointer group"
         >
-          <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center group-hover:border-white/20 transition overflow-hidden p-1.5 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center group-hover:border-blue-300 transition overflow-hidden p-1.5 shadow-sm">
             <img src="/logo.png" alt={t('appName')} className="w-full h-full object-contain" />
           </div>
           <div>
-            <span className="font-bold text-base tracking-tight text-white block">
+            <span className="font-bold text-base tracking-tight text-slate-900 block">
               {t('appName')}
             </span>
-            <span className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase block">
+            <span className="text-[10px] text-slate-400 font-medium tracking-wider uppercase block">
               נגן מוזיקה
             </span>
           </div>
@@ -77,8 +77,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => onNavigateTab('home')}
           className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
             isCurrentTab('home')
-              ? 'bg-white/10 text-white font-semibold'
-              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              ? 'bg-blue-50 text-blue-700 font-semibold'
+              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Home className="w-4 h-4" />
@@ -90,8 +90,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => onNavigateTab('search')}
           className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
             isCurrentTab('search')
-              ? 'bg-white/10 text-white font-semibold'
-              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              ? 'bg-blue-50 text-blue-700 font-semibold'
+              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Search className="w-4 h-4" />
@@ -103,8 +103,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => onNavigateTab('library')}
           className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
             isCurrentTab('library')
-              ? 'bg-white/10 text-white font-semibold'
-              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              ? 'bg-blue-50 text-blue-700 font-semibold'
+              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Library className="w-4 h-4" />
@@ -117,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
             isLikedView
               ? 'bg-rose-500/15 text-rose-300 font-semibold'
-              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Heart className={`w-4 h-4 ${isLikedView ? 'fill-rose-400 text-rose-400' : ''}`} />
@@ -129,8 +129,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => onNavigateTab('downloads')}
           className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
             isCurrentTab('downloads')
-              ? 'bg-white/10 text-white font-semibold'
-              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              ? 'bg-blue-50 text-blue-700 font-semibold'
+              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <ArrowDownToLine className="w-4 h-4" />
@@ -175,7 +175,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Bottom Footer Actions: Equalizer, Sleep Timer, Admin, Settings */}
-      <div className="p-3 border-t border-white/5 space-y-1">
+      <div className="p-3 border-t border-slate-200 space-y-1">
         <button
           id="nav-sidebar-eq-btn"
           onClick={toggleEqualizerModal}

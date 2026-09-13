@@ -2,6 +2,7 @@ import React from 'react';
 import { Play, Pause, SkipForward, SkipBack, Heart, ChevronUp, ListMusic } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { formatTime } from '../utils/formatters';
+import { handleImageError, DEFAULT_ALBUM_COVER } from '../utils/imageFallback';
 
 export const MiniPlayer: React.FC = () => {
   const {
@@ -26,9 +27,9 @@ export const MiniPlayer: React.FC = () => {
       id="mini-player-container"
       className="fixed z-40 start-2 end-2 md:start-64 md:end-4 bottom-[68px] md:bottom-3"
     >
-      <div className="relative bg-[#13151d]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-xl shadow-slate-900/10 overflow-hidden">
         {/* Top Progress Micro Bar */}
-        <div className="absolute top-0 start-0 end-0 h-[3px] bg-white/10">
+        <div className="absolute top-0 start-0 end-0 h-[3px] bg-slate-100">
           <div
             className="h-full bg-blue-500 transition-all duration-200"
             style={{ width: `${progressPercent}%` }}
@@ -42,10 +43,11 @@ export const MiniPlayer: React.FC = () => {
             onClick={openFullPlayer}
             className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer group"
           >
-            <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-zinc-900 border border-white/5 shadow-md">
+            <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200 shadow-sm">
               <img
                 src={current.coverUrl}
                 alt={current.title}
+                onError={(e) => handleImageError(e, DEFAULT_ALBUM_COVER)}
                 className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                 loading="lazy"
               />
@@ -58,7 +60,7 @@ export const MiniPlayer: React.FC = () => {
 
             <div className="min-w-0 flex-1 pe-2">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-white truncate group-hover:text-blue-400 transition">
+                <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-blue-700 transition">
                   {current.titleHe || current.title}
                 </p>
                 <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -70,7 +72,7 @@ export const MiniPlayer: React.FC = () => {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-zinc-400 truncate">
+              <p className="text-xs text-slate-500 truncate">
                 {current.artistName}
               </p>
             </div>
@@ -110,7 +112,7 @@ export const MiniPlayer: React.FC = () => {
                 e.stopPropagation();
                 togglePlay();
               }}
-              className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition shadow-lg"
+              className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition shadow-lg shadow-blue-600/20"
               aria-label={playback.isPlaying ? 'Pause' : 'Play'}
             >
               {playback.isPlaying ? (

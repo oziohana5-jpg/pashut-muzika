@@ -70,11 +70,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
   if (!data) return null;
 
   return (
-    <div className="space-y-10 pb-28 pt-2">
+    <div className="space-y-10 pb-28 pt-5 bg-[#f5f6f8] min-h-full">
       {/* Top Greeting Header & Categories */}
       <section className="px-4 sm:px-8 space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
             {getGreeting()}
             {user ? `, ${user.displayName || user.username}` : ''}
           </h1>
@@ -88,12 +88,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <div
                 key={`recent-${song.id}`}
                 onClick={() => playSong(song, data.recentlyPlayed)}
-                className="group relative flex items-center bg-zinc-900/60 hover:bg-zinc-800/80 rounded-xl overflow-hidden cursor-pointer transition border border-white/5 shadow-sm pe-3"
+                className="group relative flex items-center bg-white hover:bg-slate-50 rounded-xl overflow-hidden cursor-pointer transition border border-slate-200 shadow-sm pe-3"
               >
-                <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 bg-zinc-900 overflow-hidden relative">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 bg-slate-100 overflow-hidden relative">
                   <img
                     src={song.coverUrl}
                     alt={song.title}
+                    onError={(e) => handleImageError(e, DEFAULT_ALBUM_COVER)}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                     loading="lazy"
                   />
@@ -104,15 +105,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   )}
                 </div>
                 <div className="min-w-0 flex-1 px-3">
-                  <p className="text-xs sm:text-sm font-semibold text-white truncate">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
                     {song.titleHe || song.title}
                   </p>
-                  <p className="text-[11px] text-zinc-400 truncate">
+                  <p className="text-[11px] text-slate-500 truncate">
                     {song.artistName}
                   </p>
                 </div>
                 <button
-                  className={`w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 group-hover:scale-105 active:scale-95 shrink-0 ${
+                  className={`w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/20 transition opacity-0 group-hover:opacity-100 group-hover:scale-105 active:scale-95 shrink-0 ${
                     isPlayingThis ? 'opacity-100' : ''
                   }`}
                   aria-label="Play"
@@ -253,12 +254,12 @@ const CarouselSection: React.FC<CarouselProps> = ({ title, subtitle, icon, child
         <div>
           <div className="flex items-center gap-2">
             {icon}
-            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
               {title}
             </h2>
           </div>
           {subtitle && (
-            <p className="text-xs text-zinc-400 mt-0.5">{subtitle}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
           )}
         </div>
 
@@ -266,7 +267,7 @@ const CarouselSection: React.FC<CarouselProps> = ({ title, subtitle, icon, child
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => scroll(-320)}
-            className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition"
+            className="p-1.5 rounded-full bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-900 border border-slate-200 transition"
             aria-label="Scroll Prev"
           >
             {direction === 'rtl' ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -309,11 +310,12 @@ const SongCard: React.FC<SongCardProps> = ({
   isPlaying,
 }) => {
   return (
-    <div className="w-[150px] sm:w-[170px] shrink-0 p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 transition duration-200 group flex flex-col justify-between">
-      <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-900 mb-3 shadow-md">
+    <div className="w-[150px] sm:w-[178px] shrink-0 p-3 rounded-2xl bg-white hover:-translate-y-0.5 border border-slate-200 transition duration-200 group flex flex-col justify-between shadow-sm hover:shadow-md">
+      <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-100 mb-3 shadow-sm">
         <img
           src={song.coverUrl}
           alt={song.title}
+          onError={(e) => handleImageError(e, DEFAULT_ALBUM_COVER)}
           className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
           loading="lazy"
         />
@@ -331,7 +333,7 @@ const SongCard: React.FC<SongCardProps> = ({
       <div>
         <p
           onClick={onPlay}
-          className="font-semibold text-sm text-white truncate cursor-pointer hover:text-blue-400 transition"
+          className="font-semibold text-sm text-slate-900 truncate cursor-pointer hover:text-blue-700 transition"
           title={song.titleHe || song.title}
         >
           {song.titleHe || song.title}
@@ -339,7 +341,7 @@ const SongCard: React.FC<SongCardProps> = ({
 
         <button
           onClick={onArtistClick}
-          className="text-xs text-zinc-400 hover:text-white truncate block text-start mt-0.5 transition w-full"
+          className="text-xs text-slate-500 hover:text-slate-900 truncate block text-start mt-0.5 transition w-full"
         >
           {song.artistName}
         </button>
@@ -347,7 +349,7 @@ const SongCard: React.FC<SongCardProps> = ({
         {song.albumName && onAlbumClick && (
           <button
             onClick={onAlbumClick}
-            className="text-[11px] text-zinc-500 hover:text-zinc-300 truncate block text-start mt-0.5 transition w-full"
+            className="text-[11px] text-slate-400 hover:text-slate-700 truncate block text-start mt-0.5 transition w-full"
           >
             {song.albumName}
           </button>
@@ -368,12 +370,13 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onClick, onArtistClick }) 
   return (
     <div
       onClick={onClick}
-      className="w-[150px] sm:w-[170px] shrink-0 p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 transition duration-200 group cursor-pointer flex flex-col justify-between"
+      className="w-[150px] sm:w-[178px] shrink-0 p-3 rounded-2xl bg-white hover:-translate-y-0.5 border border-slate-200 transition duration-200 group cursor-pointer flex flex-col justify-between shadow-sm hover:shadow-md"
     >
-      <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-900 mb-3 shadow-md">
+      <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-100 mb-3 shadow-sm">
         <img
           src={album.coverUrl}
           alt={album.title}
+          onError={(e) => handleImageError(e, DEFAULT_ALBUM_COVER)}
           className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
           loading="lazy"
         />
@@ -381,7 +384,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onClick, onArtistClick }) 
       </div>
 
       <div>
-        <p className="font-semibold text-sm text-white truncate group-hover:text-blue-400 transition">
+        <p className="font-semibold text-sm text-slate-900 truncate group-hover:text-blue-700 transition">
           {album.titleHe || album.title}
         </p>
         <p
@@ -389,11 +392,11 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onClick, onArtistClick }) 
             e.stopPropagation();
             onArtistClick();
           }}
-          className="text-xs text-zinc-400 hover:text-white truncate mt-0.5 transition"
+          className="text-xs text-slate-500 hover:text-slate-900 truncate mt-0.5 transition"
         >
           {album.artistName}
         </p>
-        <span className="text-[10px] text-zinc-500 block mt-0.5">
+        <span className="text-[10px] text-slate-400 block mt-0.5">
           {album.releaseYear} • {album.trackCount} שירים
         </span>
       </div>
@@ -411,31 +414,32 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className="w-[140px] sm:w-[160px] shrink-0 p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 transition duration-200 group cursor-pointer text-center"
+      className="w-[140px] sm:w-[166px] shrink-0 p-3 rounded-2xl bg-white hover:-translate-y-0.5 border border-slate-200 transition duration-200 group cursor-pointer text-center shadow-sm hover:shadow-md"
     >
-      <div className="relative w-28 h-28 mx-auto rounded-full overflow-hidden bg-zinc-900 mb-3 shadow-md border border-white/5">
+      <div className="relative w-28 h-28 mx-auto rounded-full overflow-hidden bg-slate-100 mb-3 shadow-sm border border-slate-200">
         <img
           src={artist.imageUrl}
           alt={artist.name}
+          onError={(e) => handleImageError(e, DEFAULT_ARTIST_IMAGE)}
           className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
           loading="lazy"
         />
         {artist.verified && (
-          <div className="absolute bottom-0.5 end-0.5 w-6 h-6 rounded-full bg-[#0a0b0e] flex items-center justify-center shadow-md">
+          <div className="absolute bottom-0.5 end-0.5 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-md">
             <CheckCircle className="w-5 h-5 fill-blue-500 text-white" />
           </div>
         )}
       </div>
 
       <div className="flex items-center justify-center gap-1">
-        <p className="font-semibold text-sm text-white truncate group-hover:text-blue-400 transition">
+        <p className="font-semibold text-sm text-slate-900 truncate group-hover:text-blue-700 transition">
           {artist.nameHe || artist.name}
         </p>
         {artist.verified && (
           <CheckCircle className="w-3.5 h-3.5 fill-blue-500 text-white shrink-0" />
         )}
       </div>
-      <p className="text-xs text-zinc-400 capitalize mt-0.5">
+      <p className="text-xs text-slate-500 capitalize mt-0.5">
         {artist.genres[0] || 'Artist'}
       </p>
     </div>
@@ -452,22 +456,23 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({ playlist, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className="w-[150px] sm:w-[170px] shrink-0 p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 transition duration-200 group cursor-pointer flex flex-col justify-between"
+      className="w-[150px] sm:w-[178px] shrink-0 p-3 rounded-2xl bg-white hover:-translate-y-0.5 border border-slate-200 transition duration-200 group cursor-pointer flex flex-col justify-between shadow-sm hover:shadow-md"
     >
-      <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-900 mb-3 shadow-md">
+      <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-100 mb-3 shadow-sm">
         <img
           src={playlist.coverUrl}
           alt={playlist.name}
+          onError={(e) => handleImageError(e, DEFAULT_ALBUM_COVER)}
           className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
           loading="lazy"
         />
       </div>
 
       <div>
-        <p className="font-semibold text-sm text-white truncate group-hover:text-blue-400 transition">
+        <p className="font-semibold text-sm text-slate-900 truncate group-hover:text-blue-700 transition">
           {playlist.name}
         </p>
-        <p className="text-xs text-zinc-400 truncate mt-0.5">
+        <p className="text-xs text-slate-500 truncate mt-0.5">
           {playlist.description || playlist.ownerName}
         </p>
       </div>
