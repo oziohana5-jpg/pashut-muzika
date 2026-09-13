@@ -696,9 +696,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       .catch(() => {});
 
     const isPlaceholderStream = /soundhelix\.com|example\.com/i.test(targetSong.streamUrl || '');
+    const isPreviewOnlyStream = targetSong.id.startsWith('itunes-');
     const hasDirectAudio = Boolean(
       targetSong.streamUrl &&
       !targetSong.youtubeId &&
+      !isPreviewOnlyStream &&
       targetSong.provider !== 'youtube' &&
       !isPlaceholderStream
     );
@@ -722,7 +724,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
         })
         .catch(() => {
-          if (targetSong.streamUrl && !isPlaceholderStream && audioRef.current) {
+          if (targetSong.streamUrl && !isPreviewOnlyStream && !isPlaceholderStream && audioRef.current) {
             activeEngineRef.current = 'audio';
             audioRef.current.src = targetSong.streamUrl;
             audioRef.current.play().catch(console.warn);
