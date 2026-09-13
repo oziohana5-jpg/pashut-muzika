@@ -1020,6 +1020,19 @@ apiRouter.get('/lyrics', async (req, res) => {
   }
 
   try {
+    const fetchWithTimeout = async (url: string): Promise<globalThis.Response> => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      try {
+        return await fetch(url, {
+          signal: controller.signal,
+          headers: { 'User-Agent': 'SimplyMusicApp/1.0' },
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+
     // Clean track title: remove parenthesis, "- Single", "official video", "קליפ רשמי", etc.
     const cleanTitle = songTitle
       .replace(/\(.*?\)/g, '')
@@ -1067,9 +1080,8 @@ apiRouter.get('/lyrics', async (req, res) => {
 
     // Prefer LRCLIB's exact lookup so a cover, remix, or different recording is not selected.
     try {
-      const exactResp = await fetch(
-        `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(songArtist)}&duration=${encodeURIComponent(String(songDuration))}`,
-        { headers: { 'User-Agent': 'SimplyMusicApp/1.0' } }
+      const exactResp = await fetchWithTimeout(
+        `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(songArtist)}&duration=${encodeURIComponent(String(songDuration))}`
       );
       if (exactResp.ok) {
         const exact = await exactResp.json();
@@ -1083,9 +1095,7 @@ apiRouter.get('/lyrics', async (req, res) => {
       if (foundLrc) break;
       if (!q.trim()) continue;
       try {
-        const resp = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(q.trim())}`, {
-          headers: { 'User-Agent': 'SimplyMusicApp/1.0' },
-        });
+        const resp = await fetchWithTimeout(`https://lrclib.net/api/search?q=${encodeURIComponent(q.trim())}`);
         if (resp.ok) {
           const data: any = await resp.json();
           if (Array.isArray(data) && data.length > 0) {

@@ -1087,11 +1087,15 @@ export async function fetchDynamicLyrics(song: {
   artistName: string;
   duration?: number;
 }): Promise<LyricLine[]> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 7000);
+
   try {
     const titleToSearch = song.titleHe || song.title;
     const dur = song.duration || 180;
     const res = await fetch(
-      `/api/lyrics?title=${encodeURIComponent(titleToSearch)}&artist=${encodeURIComponent(song.artistName)}&duration=${dur}`
+      `/api/lyrics?title=${encodeURIComponent(titleToSearch)}&artist=${encodeURIComponent(song.artistName)}&duration=${dur}`,
+      { signal: controller.signal }
     );
     if (res.ok) {
       const data = await res.json();
@@ -1101,6 +1105,8 @@ export async function fetchDynamicLyrics(song: {
     }
   } catch (err) {
     // Network or API error handled smoothly
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 
   return [];
