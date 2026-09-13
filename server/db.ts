@@ -973,7 +973,7 @@ class Database {
         this.data = stored.data;
         if (!Array.isArray(this.data.songs) || this.data.songs.length === 0) {
           this.data.songs = [...initialSongs];
-          await this.mongoState.replaceOne({ _id: 'main' }, { _id: 'main', data: this.data });
+          await this.mongoState.updateOne({ _id: 'main' }, { $set: { data: this.data } });
         }
       } else {
         await this.mongoState.insertOne({ _id: 'main', data: this.data });
