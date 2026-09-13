@@ -13,7 +13,6 @@ import {
   requireAdmin,
 } from './auth';
 import { Song, User } from './types';
-import { getSongLyrics } from '../src/data/lyricsData';
 
 export const apiRouter = Router();
 
@@ -1021,16 +1020,6 @@ apiRouter.get('/lyrics', async (req, res) => {
   }
 
   try {
-    // Keep the local lyrics as a fallback only. The same song can have different
-    // intros and timing, so a synchronized recording must be preferred first.
-    const verified = getSongLyrics({
-      id: '',
-      title: songTitle,
-      titleHe: songTitle,
-      artistName: songArtist,
-      duration: songDuration,
-    });
-
     // Clean track title: remove parenthesis, "- Single", "official video", "קליפ רשמי", etc.
     const cleanTitle = songTitle
       .replace(/\(.*?\)/g, '')
@@ -1140,16 +1129,6 @@ apiRouter.get('/lyrics', async (req, res) => {
           return;
         }
       }
-    }
-
-    if (verified && verified.length > 0) {
-      res.json({
-        source: 'verified-fallback',
-        trackName: songTitle,
-        artistName: songArtist,
-        lyrics: verified,
-      });
-      return;
     }
 
     res.json({ source: 'none', lyrics: [] });
