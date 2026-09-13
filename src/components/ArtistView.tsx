@@ -26,7 +26,14 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/music/artist/${artistId}`, {
+    let cachedArtist: Artist | null = null;
+    try {
+      cachedArtist = JSON.parse(sessionStorage.getItem(`simply_music_artist_${artistId}`) || 'null');
+    } catch {}
+    const query = cachedArtist
+      ? `?name=${encodeURIComponent(cachedArtist.nameHe || cachedArtist.name)}&imageUrl=${encodeURIComponent(cachedArtist.imageUrl || '')}&genre=${encodeURIComponent(cachedArtist.genres?.[0] || '')}`
+      : '';
+    fetch(`/api/music/artist/${artistId}${query}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((res) => res.json())

@@ -627,7 +627,25 @@ apiRouter.get('/music/artist/:id', async (req: AuthenticatedRequest, res) => {
   const provider = musicService.getActiveProvider();
   const data = await provider.getArtist(req.params.id);
   if (!data) {
-    res.status(404).json({ error: 'Artist not found.' });
+    const name = String(req.query.name || '').trim();
+    if (!name) {
+      res.status(404).json({ error: 'Artist not found.' });
+      return;
+    }
+    const fallbackArtist = {
+      id: req.params.id,
+      name,
+      nameHe: name,
+      bio: `Artist profile for ${name}`,
+      bioHe: `פרופיל האמן של ${name}`,
+      imageUrl: String(req.query.imageUrl || ''),
+      bannerUrl: String(req.query.imageUrl || ''),
+      monthlyListeners: 0,
+      genres: [String(req.query.genre || 'Music')],
+      verified: false,
+    };
+    db.upsertArtist(fallbackArtist);
+    res.json({ artist: fallbackArtist, topTracks: [], albums: [], singles: [], isFollowing: false });
     return;
   }
   res.json({

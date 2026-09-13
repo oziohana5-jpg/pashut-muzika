@@ -57,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => onNavigateTab('home')}
           className="flex items-center gap-3 cursor-pointer group"
         >
-          <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center group-hover:border-white/20 transition overflow-hidden p-1.5 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center group-hover:border-white/20 transition overflow-hidden p-1 shadow-sm">
             <img src="/logo.png" alt={t('appName')} className="w-full h-full object-contain" />
           </div>
           <div>

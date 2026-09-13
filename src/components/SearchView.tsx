@@ -116,6 +116,13 @@ export const SearchView: React.FC<SearchViewProps> = ({
     { name: 'מדיטציה ושקט', color: 'from-cyan-600 to-blue-950', query: 'Ambient' },
   ];
 
+  const openArtistProfile = (artist: SearchResults['artists'][number]) => {
+    try {
+      sessionStorage.setItem(`simply_music_artist_${artist.id}`, JSON.stringify(artist));
+    } catch {}
+    onNavigateArtist(artist.id);
+  };
+
   const hasResults =
     results.songs.length > 0 ||
     results.artists.length > 0 ||
@@ -372,7 +379,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 {results.artists.map((artist) => (
                   <div
                     key={artist.id}
-                    onClick={() => onNavigateArtist(artist.id)}
+                    onClick={() => openArtistProfile(artist)}
                     className="p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 transition cursor-pointer text-center group"
                   >
                     <div className="relative w-20 h-20 mx-auto rounded-full overflow-hidden bg-zinc-900 mb-2.5 border border-white/5 shadow-md">
