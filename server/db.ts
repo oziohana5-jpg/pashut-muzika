@@ -971,6 +971,10 @@ class Database {
       const stored = await this.mongoState.findOne({ _id: 'main' });
       if (stored?.data) {
         this.data = stored.data;
+        if (!Array.isArray(this.data.songs) || this.data.songs.length === 0) {
+          this.data.songs = [...initialSongs];
+          await this.mongoState.replaceOne({ _id: 'main' }, { _id: 'main', data: this.data });
+        }
       } else {
         await this.mongoState.insertOne({ _id: 'main', data: this.data });
       }
@@ -991,7 +995,7 @@ class Database {
           users: parsed.users || initialUsers,
           artists: parsed.artists || initialArtists,
           albums: parsed.albums || initialAlbums,
-          songs: parsed.songs || initialSongs,
+          songs: Array.isArray(parsed.songs) && parsed.songs.length > 0 ? parsed.songs : initialSongs,
           playlists: parsed.playlists || initialPlaylists,
           likedSongs: parsed.likedSongs || [
             { userId: 'usr-demo', songId: 'song-1', addedAt: new Date().toISOString() },
