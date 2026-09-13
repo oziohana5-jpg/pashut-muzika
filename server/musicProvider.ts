@@ -695,14 +695,22 @@ export class JamendoProvider implements MusicProvider {
   }
 
   public async search(query: string, filter?: string): Promise<SearchResult> {
+    // Keep the original catalog available when Jamendo is unavailable or has
+    // no match, so enabling background playback cannot break search.
+    if (filter && filter !== 'all' && filter !== 'songs') {
+      return defaultMusicProvider.search(query, filter);
+    }
     const songs = await fetchJamendoTracks({ search: query.trim() });
-    return { songs, artists: [], albums: [], playlists: [] };
+    if (songs.length > 0) {
+      return { songs, artists: [], albums: [], playlists: [] };
+    }
+    return defaultMusicProvider.search(query, filter);
   }
 
   public async getTrack(trackId: string): Promise<Song | null> {
-    if (!trackId.startsWith('jamendo-')) return null;
+    if (!trackId.startsWith('jamendo-')) return defaultMusicProvider.getTrack(trackId);
     const songs = await fetchJamendoTracks({ id: trackId.replace('jamendo-', '') });
-    return songs[0] || null;
+    return songs[0] || defaultMusicProvider.getTrack(trackId);
   }
 
   public async getAlbum(albumId: string): Promise<{ album: Album; tracks: Song[] } | null> {
@@ -718,9 +726,9 @@ export class JamendoProvider implements MusicProvider {
   }
 
   public async getStream(trackId: string): Promise<StreamInfo | null> {
-    if (!trackId.startsWith('jamendo-')) return null;
+    if (!trackId.startsWith('jamendo-')) return defaultMusicProvider.getStream(trackId);
     const song = db.getSongById(trackId) || await this.getTrack(trackId);
-    if (!song?.streamUrl) return null;
+    if (!song?.streamUrl) return defaultMusicProvider.getStream(trackId);
     return {
       streamUrl: song.streamUrl,
       format: song.audioFormat,
