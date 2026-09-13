@@ -634,7 +634,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Play a song
   const playSong = (song: Song, newQueue?: Song[]) => {
     const targetSong = { ...song };
-    const isMobilePlayback = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     // Pause any legacy audio element to guarantee no sound collision
     if (audioRef.current) {
@@ -695,14 +694,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (isYtReadyRef.current && ytPlayerRef.current?.loadVideoById) {
         ytPlayerRef.current.loadVideoById(ytId);
         ytPlayerRef.current.playVideo();
-        if (isMobilePlayback) {
-          window.requestAnimationFrame(() => {
-            if (playbackRef.current.currentSong?.id !== targetSong.id) return;
-            try {
-              ytPlayerRef.current?.playVideo();
-            } catch {}
-          });
-        }
       } else {
         pendingVideoIdRef.current = ytId;
       }
@@ -764,21 +755,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           window.clearTimeout(timeoutId);
           if (data.youtubeId && playbackRef.current.currentSong?.id === targetSong.id) {
             const updated = { ...targetSong, youtubeId: data.youtubeId, duration: data.duration || targetSong.duration };
-            const isMobilePlayback = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
             setPlayback(prev => ({
               ...prev,
               currentSong: updated,
               duration: data.duration || prev.duration,
-              isPlaying: !isMobilePlayback,
+              isPlaying: true,
               isBuffering: false,
             }));
-            if (isMobilePlayback && isYtReadyRef.current && ytPlayerRef.current?.cueVideoById) {
-              // Mobile browsers require the final playVideo call to happen
-              // inside a user tap, so cue the video and wait for Play.
-              ytPlayerRef.current.cueVideoById(data.youtubeId);
-            } else {
-              startYtPlayback(data.youtubeId);
-            }
+            startYtPlayback(data.youtubeId);
           } else {
             setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
           }
