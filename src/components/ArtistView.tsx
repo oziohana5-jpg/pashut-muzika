@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Shuffle, CheckCircle, Heart, Plus, Headphones, Disc3, Sparkles, Users, ArrowUpLeft } from 'lucide-react';
+import { Play, Shuffle, CheckCircle, Heart, Plus, Headphones, Disc3, Sparkles, Users, ArrowUpLeft, SearchX } from 'lucide-react';
 import { Artist, Song, Album } from '../types';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -24,9 +24,11 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
   const [isFollowing, setIsFollowing] = useState(false);
   const [showVerifiedInfo, setShowVerifiedInfo] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState(false);
 
   useEffect(() => {
     setLoading(true);
+    setProfileError(false);
     let cachedArtist: Artist | null = null;
     try {
       cachedArtist = JSON.parse(sessionStorage.getItem(`simply_music_artist_${artistId}`) || 'null');
@@ -34,8 +36,11 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
     const query = cachedArtist
       ? `?name=${encodeURIComponent(cachedArtist.nameHe || cachedArtist.name)}&imageUrl=${encodeURIComponent(cachedArtist.imageUrl || '')}&genre=${encodeURIComponent(cachedArtist.genres?.[0] || '')}`
       : '';
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8000);
     fetch(`/api/music/artist/${artistId}${query}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: controller.signal,
     })
       .then((res) => {
         if (!res.ok) throw new Error(`Artist request failed: ${res.status}`);
@@ -47,16 +52,26 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
         setAlbums(data.albums || []);
         setIsFollowing(data.isFollowing || false);
         setFollowerCount(data.artist?.followerCount || 0);
+        if (!data.artist) setProfileError(true);
       })
       .catch((err) => {
         console.error('Failed to load artist:', err);
+        setProfileError(true);
         if (cachedArtist) {
           setArtist(cachedArtist);
           setSongs([]);
           setAlbums([]);
+          setProfileError(false);
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        window.clearTimeout(timeout);
+        setLoading(false);
+      });
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
   }, [artistId, token]);
 
   const toggleFollow = async () => {
@@ -101,7 +116,18 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
     );
   }
 
-  if (!artist) return null;
+  if (!artist || profileError) {
+    return (
+      <div className="mx-auto flex min-h-[55vh] max-w-xl items-center justify-center px-5 text-center">
+        <div className="w-full rounded-3xl border border-white/10 bg-[#13151d] px-6 py-12 shadow-2xl shadow-black/20">
+          <SearchX className="mx-auto mb-4 h-12 w-12 text-zinc-500" />
+          <h1 className="text-xl font-black text-white">אממ...</h1>
+          <p className="mt-2 text-sm text-zinc-400">לא הצלחנו למצוא את הפרופיל הזה</p>
+          <button onClick={() => window.location.reload()} className="mt-6 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-blue-500">נסה שוב</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-28 text-right">
