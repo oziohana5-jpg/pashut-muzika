@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Home,
   Search,
@@ -42,6 +42,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { t } = useLanguage();
   const { user } = useAuth();
   const { toggleEqualizerModal, toggleSleepTimerModal, playback } = usePlayer();
+  const [updateCount, setUpdateCount] = useState(0);
+
+  useEffect(() => {
+    const loadUpdateCount = () => {
+      fetch('/api/updates', { cache: 'no-store' })
+        .then((response) => response.json())
+        .then((data) => setUpdateCount(Array.isArray(data.updates) ? data.updates.length : 0))
+        .catch(() => {});
+    };
+    loadUpdateCount();
+    const timer = window.setInterval(loadUpdateCount, 30000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const isCurrentTab = (tab: ActiveTab) => activeView.type === 'tab' && activeView.tab === tab;
   const isLikedView = activeView.type === 'liked';
@@ -146,7 +159,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <Bell className="w-4 h-4" />
-          <span>{t('navUpdates')}</span>
+          <span className="flex-1">{t('navUpdates')}</span>
+          {updateCount > 0 && <span className="min-w-5 rounded-full bg-blue-600 px-1.5 py-0.5 text-center text-[10px] font-bold text-white">{updateCount}</span>}
         </button>
       </div>
 

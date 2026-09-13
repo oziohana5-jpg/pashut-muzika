@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Home, Search, Library, Bell, ArrowDownToLine, Settings } from 'lucide-react';
 import { ActiveTab, ActiveView } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -10,6 +10,14 @@ interface MobileBottomNavProps {
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeView, onNavigateTab }) => {
   const { t } = useLanguage();
+  const [updateCount, setUpdateCount] = useState(0);
+
+  useEffect(() => {
+    fetch('/api/updates', { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((data) => setUpdateCount(Array.isArray(data.updates) ? data.updates.length : 0))
+      .catch(() => {});
+  }, []);
 
   const isCurrentTab = (tab: ActiveTab) => activeView.type === 'tab' && activeView.tab === tab;
 
@@ -70,7 +78,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeView, on
             isCurrentTab('updates') ? 'text-blue-400' : 'text-zinc-400 hover:text-zinc-200'
           }`}
         >
-          <Bell className="w-5 h-5" />
+          <span className="relative"><Bell className="w-5 h-5" />{updateCount > 0 && <span className="absolute -end-3 -top-2 min-w-4 rounded-full bg-blue-600 px-1 text-[9px] font-bold text-white">{updateCount}</span>}</span>
           <span className="text-[10px] font-medium">{t('navUpdates')}</span>
         </button>
 
