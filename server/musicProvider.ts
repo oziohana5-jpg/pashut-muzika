@@ -430,11 +430,14 @@ export class LicensedCatalogProvider implements MusicProvider {
         )
       : [];
 
-    // 2. Fetch from zero-token online catalog & YouTube full-length tracks concurrently
-    const [onlineResults, ytSongs] = await Promise.all([
-      fetchOnlineCatalog(query, filter),
-      searchYouTubeTracks(query),
-    ]);
+    // Keep normal search responsive: YouTube HTML search is slow, so use it only
+    // for song searches that have no local or iTunes matches.
+    const onlineResults = await fetchOnlineCatalog(query, filter);
+    const shouldSearchYouTube =
+      filter === 'songs' &&
+      matchedSongs.length === 0 &&
+      onlineResults.songs.length === 0;
+    const ytSongs = shouldSearchYouTube ? await searchYouTubeTracks(query) : [];
 
     // Merge without duplicate IDs
     const songMap = new Map<string, Song>();

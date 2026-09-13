@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Shuffle, CheckCircle, Heart, Plus, Music, Clock } from 'lucide-react';
+import { Play, Shuffle, CheckCircle, Heart, Plus, Headphones, Disc3, Sparkles } from 'lucide-react';
 import { Artist, Song, Album } from '../types';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -82,75 +82,41 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
   if (!artist) return null;
 
   return (
-    <div className="space-y-8 pb-28">
-      {/* Artist Hero Header */}
-      <div className="relative h-64 sm:h-80 w-full overflow-hidden flex items-end p-6 sm:p-10 border-b border-white/5">
-        <div className="absolute inset-0 bg-zinc-900">
-          <img
-            src={artist.imageUrl}
-            alt={artist.name}
-            className="w-full h-full object-cover object-center filter brightness-60"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0b0e] via-[#0a0b0e]/50 to-transparent" />
+    <div className="pb-28 text-right">
+      <section className="relative isolate overflow-hidden border-b border-white/10 bg-[#11151d]">
+        <div className="absolute inset-0 -z-20">
+          <img src={artist.bannerUrl || artist.imageUrl} alt="" className="h-full w-full object-cover opacity-40" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,#0a0b0e_8%,rgba(10,11,14,.74)_48%,rgba(10,11,14,.28)),linear-gradient(0deg,#0a0b0e_0%,transparent_68%)]" />
         </div>
-
-        <div className="relative z-10 space-y-2 max-w-2xl">
-          {artist.verified && (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-semibold">
-              <CheckCircle className="w-3.5 h-3.5 fill-blue-500 text-white" />
-              <span>{t('verifiedArtist')}</span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-              {artist.nameHe || artist.name}
-            </h1>
-            {artist.verified && (
-              <CheckCircle className="w-8 h-8 sm:w-10 sm:h-10 fill-blue-500 text-white shrink-0 drop-shadow-lg" />
-            )}
+        <div className="mx-auto flex min-h-[390px] max-w-6xl flex-col items-start justify-end gap-5 px-5 pb-8 pt-14 sm:min-h-[420px] sm:flex-row sm:items-end sm:gap-8 sm:px-10 sm:pb-12">
+          <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-full border-4 border-white/20 bg-zinc-900 shadow-2xl shadow-black/50 sm:h-56 sm:w-56">
+            <img src={artist.imageUrl} alt={artist.name} className="h-full w-full object-cover" />
           </div>
-
-          <p className="text-xs sm:text-sm text-zinc-300">
-            {formatNumber(artist.monthlyListeners)} {t('monthlyListeners')} • {artist.genres.join(', ')}
-          </p>
+          <div className="max-w-2xl space-y-4">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-blue-300">
+              {artist.verified && <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 px-3 py-1.5"><CheckCircle className="h-3.5 w-3.5 fill-blue-500 text-white" /> {t('verifiedArtist')}</span>}
+              <span className="rounded-full border border-white/15 bg-black/20 px-3 py-1.5">{artist.genres[0]}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl">{artist.nameHe || artist.name}</h1>
+              {artist.verified && <CheckCircle className="h-7 w-7 shrink-0 fill-blue-500 text-white sm:h-9 sm:w-9" />}
+            </div>
+            <p className="max-w-xl text-sm leading-6 text-zinc-300 sm:text-base">{artist.bioHe || artist.bio}</p>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-zinc-300 sm:text-sm">
+              <span className="inline-flex items-center gap-2"><Headphones className="h-4 w-4 text-blue-400" /> {formatNumber(artist.monthlyListeners)} {t('monthlyListeners')}</span>
+              <span className="inline-flex items-center gap-2"><Disc3 className="h-4 w-4 text-blue-400" /> {albums.length} {t('albumsAndSingles')}</span>
+            </div>
+          </div>
         </div>
+      </section>
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-5 py-7 sm:px-10">
+        <button id="btn-play-all-artist" onClick={playAll} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-500 active:scale-95"><Play className="h-4 w-4 fill-current" /> {t('playAll')}</button>
+        <button id="btn-shuffle-artist" onClick={shuffleAll} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.06] px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 active:scale-95"><Shuffle className="h-4 w-4" /> {t('shuffle')}</button>
+        <button id="btn-follow-artist" onClick={toggleFollow} className={`rounded-full px-5 py-3 text-sm font-semibold transition active:scale-95 ${isFollowing ? 'border border-blue-400/40 bg-blue-500/15 text-blue-300' : 'border border-white/15 bg-transparent text-white hover:bg-white/10'}`}>{isFollowing ? t('unfollow') : t('follow')}</button>
       </div>
 
-      {/* Action Buttons Row */}
-      <div className="px-4 sm:px-8 flex flex-wrap items-center gap-3">
-        <button
-          id="btn-play-all-artist"
-          onClick={playAll}
-          className="flex items-center gap-2 px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-xl shadow-blue-600/25 active:scale-95 transition"
-        >
-          <Play className="w-4 h-4 fill-current" />
-          <span>{t('playAll')}</span>
-        </button>
-
-        <button
-          id="btn-shuffle-artist"
-          onClick={shuffleAll}
-          className="flex items-center gap-2 px-5 py-3 rounded-full bg-white/5 hover:bg-white/10 text-white font-medium text-sm border border-white/5 active:scale-95 transition"
-        >
-          <Shuffle className="w-4 h-4" />
-          <span>{t('shuffle')}</span>
-        </button>
-
-        <button
-          id="btn-follow-artist"
-          onClick={toggleFollow}
-          className={`px-5 py-3 rounded-full text-sm font-semibold transition active:scale-95 ${
-            isFollowing
-              ? 'bg-zinc-800 text-zinc-300 border border-white/10'
-              : 'bg-white/10 hover:bg-white/15 text-white border border-white/20'
-          }`}
-        >
-          {isFollowing ? t('unfollow') : t('follow')}
-        </button>      </div>
-
       {/* Popular Tracks Section */}
-      <section className="px-4 sm:px-8 space-y-3">
+      <section className="mx-auto max-w-6xl space-y-3 px-5 sm:px-10">
         <h2 className="text-xl font-bold text-white tracking-tight">
           {t('popularTracks')}
         </h2>
@@ -162,7 +128,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
             return (
               <div
                 key={song.id}
-                className={`flex items-center justify-between p-2.5 rounded-xl transition group ${
+                className={`flex items-center justify-between rounded-xl border-b border-white/[.06] px-2 py-3 transition group ${
                   isPlayingThis ? 'bg-blue-600/10' : 'hover:bg-white/5'
                 }`}
               >
@@ -234,7 +200,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
 
       {/* Albums & Singles Section */}
       {albums.length > 0 && (
-        <section className="px-4 sm:px-8 space-y-4">
+        <section className="mx-auto mt-12 max-w-6xl space-y-4 px-5 sm:px-10">
           <h2 className="text-xl font-bold text-white tracking-tight">
             {t('albumsAndSingles')}
           </h2>
@@ -243,7 +209,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
               <div
                 key={album.id}
                 onClick={() => onNavigateAlbum(album.id)}
-                className="p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 transition cursor-pointer group"
+                className="group cursor-pointer"
               >
                 <div className="aspect-square rounded-xl overflow-hidden bg-zinc-900 mb-2.5 shadow-md">
                   <img
@@ -266,10 +232,9 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
 
       {/* Biography Section */}
       {artist.bio && (
-        <section className="px-4 sm:px-8 space-y-2">
-          <h2 className="text-xl font-bold text-white tracking-tight">
-            {t('biography')}
-          </h2>          <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 max-w-3xl text-sm leading-relaxed text-zinc-300">
+        <section className="mx-auto mt-12 max-w-6xl space-y-3 px-5 sm:px-10">
+          <h2 className="border-b border-white/10 pb-3 text-2xl font-black tracking-tight text-white">{t('biography')}</h2>
+          <div className="max-w-3xl text-sm leading-7 text-zinc-300">
             {artist.bioHe || artist.bio}
           </div>
         </section>

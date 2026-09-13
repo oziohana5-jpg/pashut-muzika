@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, SkipForward, SkipBack, Heart, ChevronUp, ListMusic } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Heart, ChevronUp, ListMusic, Video } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { formatTime } from '../utils/formatters';
 
@@ -10,6 +10,7 @@ export const MiniPlayer: React.FC = () => {
     nextTrack,
     previousTrack,
     openFullPlayer,
+    toggleVideoMode,
     toggleQueueModal,
     isLiked,
     toggleLike,
@@ -119,6 +120,24 @@ export const MiniPlayer: React.FC = () => {
                 <Play className="w-5 h-5 fill-current translate-x-0.5" />
               )}
             </button>
+
+            {current.youtubeId && (
+              <button
+                id="mini-player-video-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openFullPlayer();
+                  toggleVideoMode();
+                }}
+                className={`p-2 rounded-full transition ${
+                  playback.isVideoMode ? 'text-rose-400 bg-rose-500/10' : 'text-zinc-300 hover:text-white hover:bg-white/10'
+                }`}
+                aria-label="Music video"
+                title="קליפ YouTube"
+              >
+                <Video className="w-4 h-4" />
+              </button>
+            )}
 
             <button
               id="mini-player-next-btn"

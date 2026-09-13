@@ -11,6 +11,7 @@ import {
   generateToken,
   requireAuth,
   requireAdmin,
+  isAdminEmail,
 } from './auth';
 import { Song, User } from './types';
 import { getSongLyrics } from '../src/data/lyricsData';
@@ -52,7 +53,7 @@ apiRouter.post('/auth/register', (req, res) => {
     displayName: displayName?.trim() || username.trim(),
     passwordHash: hashPassword(password),
     avatarUrl: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(username)}`,
-    role: 'user',
+    role: isAdminEmail(email) ? 'admin' : 'user',
     disabled: false,
   });
 
@@ -77,6 +78,11 @@ apiRouter.post('/auth/login', (req, res) => {
   if (user.disabled) {
     res.status(403).json({ error: 'This account has been disabled by an administrator.' });
     return;
+  }
+
+  if (isAdminEmail(user.email) && user.role !== 'admin') {
+    db.updateUser(user.id, { role: 'admin' });
+    user.role = 'admin';
   }
 
   const token = generateToken(user);
@@ -121,7 +127,7 @@ apiRouter.post('/auth/google', (req, res) => {
       displayName: name,
       passwordHash: hashPassword('google_auth_oauth_secret_' + userEmail),
       avatarUrl: avatar,
-      role: 'user',
+      role: isAdminEmail(userEmail) ? 'admin' : 'user',
       disabled: false,
     });
   } else {
@@ -130,6 +136,7 @@ apiRouter.post('/auth/google', (req, res) => {
       db.updateUser(user.id, {
         displayName: name,
         avatarUrl: avatar,
+        ...(isAdminEmail(userEmail) ? { role: 'admin' as const } : {}),
       }) || user;
   }
 

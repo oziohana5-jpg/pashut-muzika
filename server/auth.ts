@@ -4,6 +4,11 @@ import { db } from './db';
 import { User } from './types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'simply_music_super_secure_key_2026';
+const ADMIN_EMAILS = new Set(['ozi@gmail.com']);
+
+export function isAdminEmail(email: string): boolean {
+  return ADMIN_EMAILS.has(email.trim().toLowerCase());
+}
 
 export interface TokenPayload {
   userId: string;
@@ -79,6 +84,13 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   if (!user || user.disabled) {
     req.user = undefined;
     return next();
+  }
+
+  if (isAdminEmail(user.email) && user.role !== 'admin') {
+    const promotedUser = db.updateUser(user.id, { role: 'admin' });
+    req.user = promotedUser || user;
+    next();
+    return;
   }
 
   req.user = user;
