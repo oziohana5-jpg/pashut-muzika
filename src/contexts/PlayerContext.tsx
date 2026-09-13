@@ -419,6 +419,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               ...prev,
               currentTime: time,
               duration: safeDur,
+              isBuffering: time > 0 ? false : prev.isBuffering,
             };
           });
         } catch {}
