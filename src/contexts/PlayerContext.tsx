@@ -592,9 +592,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         )
           .then(res => res.json())
           .then(data => {
-            const tracks: Song[] = (data.similarTracks || []).filter(
-              (s: Song) => s.id !== currentSong.id
-            );
+            const tracks: Song[] = (data.similarTracks || []).filter((s: Song) => {
+              const isPlaceholder = /soundhelix\.com|example\.com/i.test(s.streamUrl || '');
+              return s.id !== currentSong.id && (Boolean(s.youtubeId) || Boolean(s.streamUrl && !isPlaceholder));
+            });
             if (tracks.length > 0) {
               // Shuffle for variety
               const shuffled = [...tracks].sort(() => Math.random() - 0.5);
