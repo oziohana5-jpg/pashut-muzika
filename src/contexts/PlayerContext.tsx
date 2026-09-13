@@ -693,7 +693,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       })
       .catch(() => {});
 
-    const hasDirectAudio = Boolean(targetSong.streamUrl && targetSong.provider !== 'youtube');
+    const isPlaceholderStream = /soundhelix\.com|example\.com/i.test(targetSong.streamUrl || '');
+    const hasDirectAudio = Boolean(
+      targetSong.streamUrl &&
+      !targetSong.youtubeId &&
+      targetSong.provider !== 'youtube' &&
+      !isPlaceholderStream
+    );
 
     if (hasDirectAudio && audioRef.current) {
       activeEngineRef.current = 'audio';
@@ -724,7 +730,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         })
         .catch(() => {
           // If YouTube resolution fails, only play real audio stream if explicitly provided (never random trance)
-          if (targetSong.streamUrl && audioRef.current) {
+          if (targetSong.streamUrl && !isPlaceholderStream && audioRef.current) {
             activeEngineRef.current = 'audio';
             audioRef.current.src = targetSong.streamUrl;
             audioRef.current.play().catch(console.warn);
