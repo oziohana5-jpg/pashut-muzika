@@ -649,10 +649,27 @@ export class LicensedCatalogProvider implements MusicProvider {
       }
     }
 
+    const allTracks = db.getSongs().filter(s => s.artistId === artistId);
+    if (!artist && allTracks.length > 0) {
+      const firstTrack = allTracks[0];
+      artist = {
+        id: artistId,
+        name: firstTrack.artistName,
+        nameHe: firstTrack.artistName,
+        bio: `Artist profile for ${firstTrack.artistName}`,
+        bioHe: `פרופיל האמן של ${firstTrack.artistName}`,
+        imageUrl: firstTrack.coverUrl,
+        bannerUrl: firstTrack.coverUrl,
+        monthlyListeners: 0,
+        genres: [firstTrack.genre || 'Music'],
+        verified: false,
+      };
+      db.upsertArtist(artist);
+    }
+
     if (!artist) return null;
     artist = await fetchRealArtistImage(artist);
     db.upsertArtist(artist);
-    const allTracks = db.getSongs().filter(s => s.artistId === artistId);
     const topTracks = [...allTracks].sort((a, b) => b.plays - a.plays);
     const albums = db.getAlbums().filter(al => al.artistId === artistId);
     const singles = allTracks.filter(t => !albums.some(al => al.id === t.albumId));
