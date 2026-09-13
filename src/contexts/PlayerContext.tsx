@@ -634,6 +634,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Play a song
   const playSong = (song: Song, newQueue?: Song[]) => {
     const targetSong = { ...song };
+    const isMobilePlayback = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     // Pause any legacy audio element to guarantee no sound collision
     if (audioRef.current) {
@@ -661,6 +662,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         history: updatedHistory,
         queue: cleanQueue,
         isFullPlayerOpen: true,
+        isVideoMode: isMobilePlayback && Boolean(targetSong.youtubeId) ? true : prev.isVideoMode,
       };
     });
 
@@ -686,6 +688,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (isYtReadyRef.current && ytPlayerRef.current?.loadVideoById) {
         ytPlayerRef.current.loadVideoById(ytId);
         ytPlayerRef.current.playVideo();
+        if (isMobilePlayback) {
+          window.requestAnimationFrame(() => {
+            if (playbackRef.current.currentSong?.id !== targetSong.id) return;
+            try {
+              ytPlayerRef.current?.playVideo();
+            } catch {}
+          });
+        }
       } else {
         pendingVideoIdRef.current = ytId;
       }
