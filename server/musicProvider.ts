@@ -751,14 +751,10 @@ export class MusicService {
   }
 
   public getActiveProvider(): MusicProvider {
-    if (process.env.MUSIC_PROVIDER === 'jamendo' && this.providers.get('jamendo_legal')?.isEnabled()) {
-      return this.providers.get('jamendo_legal')!;
-    }
-
-    // Check highest priority enabled provider
+    // Keep the original catalog and YouTube search as the primary source.
     const provConfigs = db.getProviders().sort((a, b) => a.priority - b.priority);
     for (const conf of provConfigs) {
-      if (conf.enabled && this.providers.has(conf.id)) {
+      if (conf.enabled && conf.id !== 'jamendo_legal' && this.providers.has(conf.id)) {
         return this.providers.get(conf.id)!;
       }
     }
