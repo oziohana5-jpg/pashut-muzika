@@ -721,7 +721,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const playDirectAudio = (directSong: Song) => {
       if (!audioRef.current || !directSong.streamUrl) return;
       activeEngineRef.current = 'audio';
-      audioRef.current.src = directSong.streamUrl;
+      audioRef.current.src = directSong.provider === 'jamendo_legal'
+        ? `/api/stream/${encodeURIComponent(directSong.id)}`
+        : directSong.streamUrl;
       audioRef.current.load();
       audioRef.current.play().catch(console.warn);
       setPlayback(prev => ({
@@ -751,7 +753,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     if (hasDirectAudio && audioRef.current) {
       activeEngineRef.current = 'audio';
-      audioRef.current.src = targetSong.streamUrl;
+      audioRef.current.src = targetSong.provider === 'jamendo_legal'
+        ? `/api/stream/${encodeURIComponent(targetSong.id)}`
+        : targetSong.streamUrl;
       audioRef.current.load();
       audioRef.current.play().catch(console.warn);
     } else {
