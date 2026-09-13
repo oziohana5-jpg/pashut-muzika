@@ -732,6 +732,23 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }));
     };
 
+    const fallbackToYouTube = () => {
+      if (targetSong.youtubeId && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        window.location.assign(`https://www.youtube.com/watch?v=${encodeURIComponent(targetSong.youtubeId)}`);
+        return;
+      }
+      if (targetSong.youtubeId) {
+        startYtPlayback(targetSong.youtubeId);
+        return;
+      }
+      setPlayback(prev => ({
+        ...prev,
+        isPlaying: false,
+        isBuffering: false,
+        error: t('songUnavailable'),
+      }));
+    };
+
     if (hasDirectAudio && audioRef.current) {
       activeEngineRef.current = 'audio';
       audioRef.current.src = targetSong.streamUrl;
@@ -757,16 +774,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             playDirectAudio(directMatch);
             return;
           }
-          setPlayback(prev => ({
-            ...prev,
-            isPlaying: false,
-            isBuffering: false,
-            error: t('songUnavailable'),
-          }));
+          fallbackToYouTube();
         })
         .catch(() => {
           window.clearTimeout(resolveTimeout);
-          setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
+          fallbackToYouTube();
         });
     }
 
