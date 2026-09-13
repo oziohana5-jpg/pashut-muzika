@@ -705,40 +705,49 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       !isPlaceholderStream
     );
 
+    const playDirectAudio = (directSong: Song) => {
+      if (!audioRef.current || !directSong.streamUrl) return;
+      activeEngineRef.current = 'audio';
+      audioRef.current.src = directSong.streamUrl;
+      audioRef.current.load();
+      audioRef.current.play().catch(console.warn);
+      setPlayback(prev => ({
+        ...prev,
+        currentSong: directSong,
+        duration: directSong.duration || prev.duration,
+        isBuffering: true,
+      }));
+    };
+
     if (hasDirectAudio && audioRef.current) {
       activeEngineRef.current = 'audio';
       audioRef.current.src = targetSong.streamUrl;
       audioRef.current.load();
       audioRef.current.play().catch(console.warn);
-    } else if (targetSong.youtubeId && !isPlaceholderStream) {
-      startYtPlayback(targetSong.youtubeId);
     } else {
-      activeEngineRef.current = 'youtube';
-      // Simultaneously resolve real YouTube track for full-length playback
-      fetch(`/api/music/resolve-youtube?title=${encodeURIComponent(targetSong.title)}&artist=${encodeURIComponent(targetSong.artistName)}`)
+      // Existing catalog songs may not have a direct URL. Resolve them through
+      // Jamendo instead of silently falling back to a YouTube iframe.
+      fetch(`/api/music/search?q=${encodeURIComponent(`${targetSong.title} ${targetSong.artistName}`)}&filter=songs`)
         .then(res => res.json())
         .then(data => {
-          if (data.youtubeId && playbackRef.current.currentSong?.id === targetSong.id) {
-            const updated = {
-              ...targetSong,
-              youtubeId: data.youtubeId,
-              duration: data.duration || targetSong.duration,
-            };
-            setPlayback(prev => ({
-              ...prev,
-              currentSong: updated,
-              duration: data.duration || prev.duration,
-            }));
-            startYtPlayback(data.youtubeId);
+          const directMatch = (data.songs || []).find((candidate: Song) =>
+            candidate.provider === 'jamendo_legal' &&
+            Boolean(candidate.streamUrl) &&
+            isSameSong(candidate, targetSong)
+          );
+          if (directMatch && playbackRef.current.currentSong?.id === targetSong.id) {
+            playDirectAudio(directMatch);
+            return;
           }
+          setPlayback(prev => ({
+            ...prev,
+            isPlaying: false,
+            isBuffering: false,
+            error: t('songUnavailable'),
+          }));
         })
         .catch(() => {
-          // If YouTube resolution fails, only play real audio stream if explicitly provided (never random trance)
-          if (targetSong.streamUrl && !isPreviewOnlyStream && !isPlaceholderStream && audioRef.current) {
-            activeEngineRef.current = 'audio';
-            audioRef.current.src = targetSong.streamUrl;
-            audioRef.current.play().catch(console.warn);
-          }
+          setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
         });
     }
 
