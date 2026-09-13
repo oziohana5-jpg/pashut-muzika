@@ -1005,18 +1005,7 @@
       "addedAt": "2026-09-12T10:03:25.896Z"
     }
   ],
-  "followedArtists": [
-    {
-      "userId": "usr-1789207710431-wbajw",
-      "artistId": "art-osher-cohen",
-      "followedAt": "2026-09-12T18:41:17.707Z"
-    },
-    {
-      "userId": "usr-demo",
-      "artistId": "art-1",
-      "followedAt": "2026-09-12T10:03:25.896Z"
-    }
-  ],
+  "followedArtists": [],
   "recentlyPlayed": [
     {
       "id": "rp-1789208335527",

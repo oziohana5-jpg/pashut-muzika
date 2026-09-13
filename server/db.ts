@@ -1001,9 +1001,7 @@ class Database {
             { userId: 'usr-demo', songId: 'song-1', addedAt: new Date().toISOString() },
             { userId: 'usr-demo', songId: 'song-7', addedAt: new Date().toISOString() },
           ],
-          followedArtists: parsed.followedArtists || [
-            { userId: 'usr-demo', artistId: 'art-1', followedAt: new Date().toISOString() },
-          ],
+          followedArtists: parsed.followedArtists || [],
           recentlyPlayed: parsed.recentlyPlayed || [
             { id: 'rp-1', userId: 'usr-demo', songId: 'song-1', playedAt: new Date().toISOString(), playbackPosition: 45 },
             { id: 'rp-2', userId: 'usr-demo', songId: 'song-4', playedAt: new Date().toISOString(), playbackPosition: 12 },
@@ -1028,9 +1026,7 @@ class Database {
         { userId: 'usr-demo', songId: 'song-1', addedAt: new Date().toISOString() },
         { userId: 'usr-demo', songId: 'song-7', addedAt: new Date().toISOString() },
       ],
-      followedArtists: [
-        { userId: 'usr-demo', artistId: 'art-1', followedAt: new Date().toISOString() },
-      ],
+      followedArtists: [],
       recentlyPlayed: [
         { id: 'rp-1', userId: 'usr-demo', songId: 'song-1', playedAt: new Date().toISOString(), playbackPosition: 45 },
       ],
@@ -1286,6 +1282,10 @@ class Database {
     return this.data.followedArtists
       .filter(f => f.userId === userId)
       .map(f => f.artistId);
+  }
+
+  public getArtistFollowerCount(artistId: string): number {
+    return this.data.followedArtists.filter(follow => follow.artistId === artistId).length;
   }
 
   public toggleFollowArtist(userId: string, artistId: string): boolean {

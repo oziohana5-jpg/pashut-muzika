@@ -14,11 +14,12 @@ interface ArtistViewProps {
 export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbum }) => {
   const { playSong, playback, isLiked, toggleLike, addToQueue } = usePlayer();
   const { token } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [artist, setArtist] = useState<Artist | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
+  const [followerCount, setFollowerCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -33,6 +34,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
         setSongs(data.topTracks || data.popularSongs || []);
         setAlbums(data.albums || []);
         setIsFollowing(data.isFollowing || false);
+        setFollowerCount(data.artist?.followerCount || 0);
       })
       .catch((err) => console.error('Failed to load artist:', err))
       .finally(() => setLoading(false));
@@ -47,6 +49,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
       });
       const data = await res.json();
       setIsFollowing(data.isFollowed ?? data.isFollowing);
+      setFollowerCount((current) => current + ((data.isFollowed ?? data.isFollowing) ? 1 : -1));
       if (artist) {
         setArtist({
           ...artist,
@@ -103,7 +106,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
             </div>
             <p className="max-w-xl text-sm leading-6 text-zinc-300 sm:text-base">{artist.bioHe || artist.bio}</p>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-zinc-300 sm:text-sm">
-              <span className="inline-flex items-center gap-2"><Headphones className="h-4 w-4 text-blue-400" /> {formatNumber(artist.monthlyListeners)} {t('monthlyListeners')}</span>
+              <span className="inline-flex items-center gap-2"><Headphones className="h-4 w-4 text-blue-400" /> {formatNumber(followerCount)} {language === 'he' ? 'עוקבים אמיתיים' : 'real followers'}</span>
               <span className="inline-flex items-center gap-2"><Disc3 className="h-4 w-4 text-blue-400" /> {albums.length} {t('albumsAndSingles')}</span>
             </div>
           </div>

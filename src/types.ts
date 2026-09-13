@@ -19,6 +19,7 @@ export interface Artist {
   imageUrl: string;
   bannerUrl: string;
   monthlyListeners: number;
+  followerCount?: number;
   genres: string[];
   verified: boolean;
 }
@@ -136,6 +137,15 @@ export interface AdminStats {
   playbackErrorsCount: number;
 }
 
+export interface AppUpdate {
+  id: string;
+  title: string;
+  body: string;
+  type: 'info' | 'feature' | 'fix' | 'important';
+  createdAt: string;
+  authorName: string;
+}
+
 export interface ProviderConfig {
   id: string;
   name: string;
@@ -159,7 +169,7 @@ export interface PlaybackLog {
   message?: string;
 }
 
-export type ActiveTab = 'home' | 'search' | 'library' | 'downloads' | 'admin' | 'settings';
+export type ActiveTab = 'home' | 'search' | 'library' | 'updates' | 'downloads' | 'admin' | 'settings';
 export type ActiveView =
   | { type: 'tab'; tab: ActiveTab }
   | { type: 'artist'; id: string }

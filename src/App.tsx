@@ -26,6 +26,7 @@ import { AlbumView } from './components/AlbumView';
 import { PlaylistView } from './components/PlaylistView';
 import { LikedSongsView } from './components/LikedSongsView';
 import { AdminDashboard } from './components/AdminDashboard';
+import { UpdatesView } from './components/UpdatesView';
 import { DownloadsView } from './components/DownloadsView';
 
 const MainApp: React.FC = () => {
@@ -196,6 +197,10 @@ const MainApp: React.FC = () => {
 
           {activeView.type === 'tab' && activeView.tab === 'downloads' && (
             <DownloadsView />
+          )}
+
+          {activeView.type === 'tab' && activeView.tab === 'updates' && (
+            <UpdatesView />
           )}
 
           {activeView.type === 'tab' && activeView.tab === 'settings' && (

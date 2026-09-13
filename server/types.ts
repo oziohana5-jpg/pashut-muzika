@@ -29,6 +29,7 @@ export interface Artist {
   imageUrl: string;
   bannerUrl: string;
   monthlyListeners: number;
+  followerCount?: number;
   genres: string[];
   verified: boolean;
 }

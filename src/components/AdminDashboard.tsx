@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Users, Music, Disc3, Radio, Server, AlertTriangle, RefreshCw } from 'lucide-react';
-import { AdminStats, User, ProviderConfig, PlaybackLog } from '../types';
+import { Shield, Users, Music, Disc3, Radio, Server, AlertTriangle, RefreshCw, Bell, Plus, Trash2 } from 'lucide-react';
+import { AdminStats, User, ProviderConfig, PlaybackLog, AppUpdate } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -12,6 +12,11 @@ export const AdminDashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [logs, setLogs] = useState<PlaybackLog[]>([]);
+  const [updates, setUpdates] = useState<AppUpdate[]>([]);
+  const [updateTitle, setUpdateTitle] = useState('');
+  const [updateBody, setUpdateBody] = useState('');
+  const [updateType, setUpdateType] = useState<AppUpdate['type']>('info');
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchAdminData = () => {
@@ -23,15 +28,46 @@ export const AdminDashboard: React.FC = () => {
       fetch('/api/admin/users', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
       fetch('/api/admin/providers', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
       fetch('/api/admin/errors', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
+      fetch('/api/updates').then((r) => r.json()),
     ])
-      .then(([statsData, usersData, providersData, logsData]) => {
+      .then(([statsData, usersData, providersData, logsData, updatesData]) => {
         setStats(statsData);
         setUsers(usersData.users || []);
         setProviders(providersData.providers || []);
         setLogs(logsData.logs || []);
+        setUpdates(updatesData.updates || []);
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
+  };
+
+  const publishUpdate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!token || !updateTitle.trim() || !updateBody.trim()) return;
+    setUpdateMessage(null);
+    const response = await fetch('/api/admin/updates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ title: updateTitle, body: updateBody, type: updateType }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setUpdateMessage(data.error || 'לא ניתן לפרסם את העדכון.');
+      return;
+    }
+    setUpdates((current) => [data.update, ...current]);
+    setUpdateTitle('');
+    setUpdateBody('');
+    setUpdateMessage('העדכון פורסם ונשמר במסד הנתונים.');
+  };
+
+  const deleteUpdate = async (id: string) => {
+    if (!token || !window.confirm('למחוק את העדכון הזה לכל המשתמשים?')) return;
+    const response = await fetch(`/api/admin/updates/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) setUpdates((current) => current.filter((update) => update.id !== id));
   };
 
   useEffect(() => {
@@ -113,7 +149,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="p-4 rounded-2xl bg-[#13151d] border border-white/5">
             <div className="flex items-center gap-2 text-zinc-400 mb-1">
               <Users className="w-4 h-4 text-blue-400" />
-              <span className="text-[11px] font-medium uppercase">{t('adminUsers')}</span>
+              <span className="text-[11px] font-medium">{t('adminUsers')}</span>
             </div>
             <p className="text-2xl font-black text-white">{stats.totalUsers}</p>
           </div>
@@ -121,7 +157,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="p-4 rounded-2xl bg-[#13151d] border border-white/5">
             <div className="flex items-center gap-2 text-zinc-400 mb-1">
               <Music className="w-4 h-4 text-emerald-400" />
-              <span className="text-[11px] font-medium uppercase">{t('adminSongs')}</span>
+              <span className="text-[11px] font-medium">{t('adminSongs')}</span>
             </div>
             <p className="text-2xl font-black text-white">{stats.totalSongs}</p>
           </div>
@@ -129,7 +165,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="p-4 rounded-2xl bg-[#13151d] border border-white/5">
             <div className="flex items-center gap-2 text-zinc-400 mb-1">
               <Users className="w-4 h-4 text-purple-400" />
-              <span className="text-[11px] font-medium uppercase">{t('adminArtists')}</span>
+              <span className="text-[11px] font-medium">{t('adminArtists')}</span>
             </div>
             <p className="text-2xl font-black text-white">{stats.totalArtists}</p>
           </div>
@@ -137,7 +173,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="p-4 rounded-2xl bg-[#13151d] border border-white/5">
             <div className="flex items-center gap-2 text-zinc-400 mb-1">
               <Radio className="w-4 h-4 text-rose-400" />
-              <span className="text-[11px] font-medium uppercase">{t('adminPlaylists')}</span>
+              <span className="text-[11px] font-medium">{t('adminPlaylists')}</span>
             </div>
             <p className="text-2xl font-black text-white">{stats.totalPlaylists}</p>
           </div>
@@ -145,7 +181,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="p-4 rounded-2xl bg-[#13151d] border border-white/5">
             <div className="flex items-center gap-2 text-zinc-400 mb-1">
               <Disc3 className="w-4 h-4 text-cyan-400" />
-              <span className="text-[11px] font-medium uppercase">הזרמות סה״כ</span>
+              <span className="text-[11px] font-medium">השמעות מצטברות בקטלוג</span>
             </div>
             <p className="text-2xl font-black text-white">{stats.totalStreamsServed}</p>
           </div>
@@ -153,12 +189,44 @@ export const AdminDashboard: React.FC = () => {
           <div className="p-4 rounded-2xl bg-[#13151d] border border-white/5">
             <div className="flex items-center gap-2 text-zinc-400 mb-1">
               <Server className="w-4 h-4 text-amber-400" />
-              <span className="text-[11px] font-medium uppercase">ספקים פעילים</span>
+              <span className="text-[11px] font-medium">ספקי שמע פעילים</span>
             </div>
             <p className="text-2xl font-black text-white">{providers.filter(p => p.enabled).length}</p>
           </div>
         </div>
       )}
+
+      <section className="space-y-5 rounded-2xl border border-blue-500/20 bg-[#13151d] p-6">
+        <div className="flex items-center gap-2 text-blue-400">
+          <Bell className="h-5 w-5" />
+          <div>
+            <h2 className="text-base font-bold text-white">פרסום עדכון לכל המשתמשים</h2>
+            <p className="text-xs text-zinc-500">העדכון יופיע מיד בקטגוריית ״עדכונים״. רק אדמינים יכולים לפרסם או למחוק.</p>
+          </div>
+        </div>
+
+        <form onSubmit={publishUpdate} className="grid gap-3 md:grid-cols-[1fr_180px]">
+          <input value={updateTitle} onChange={(event) => setUpdateTitle(event.target.value)} maxLength={120} required placeholder="כותרת העדכון" className="rounded-xl border border-white/10 bg-[#0d0f15] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500" />
+          <select value={updateType} onChange={(event) => setUpdateType(event.target.value as AppUpdate['type'])} className="rounded-xl border border-white/10 bg-[#0d0f15] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500">
+            <option value="info">מידע</option>
+            <option value="feature">פיצ׳ר חדש</option>
+            <option value="fix">תיקון</option>
+            <option value="important">חשוב</option>
+          </select>
+          <textarea value={updateBody} onChange={(event) => setUpdateBody(event.target.value)} maxLength={5000} required rows={4} placeholder="כתוב כאן את תוכן העדכון..." className="rounded-xl border border-white/10 bg-[#0d0f15] px-3 py-2.5 text-sm leading-6 text-white outline-none focus:border-blue-500 md:col-span-2" />
+          <div className="flex items-center justify-between gap-3 md:col-span-2">
+            <span className={`text-xs ${updateMessage?.includes('פורסם') ? 'text-emerald-400' : 'text-rose-400'}`}>{updateMessage}</span>
+            <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-500"><Plus className="h-4 w-4" /> פרסם עדכון</button>
+          </div>
+        </form>
+
+        {updates.length > 0 && <div className="space-y-2 border-t border-white/10 pt-4">
+          {updates.slice(0, 8).map((update) => <div key={update.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/[.02] p-3">
+            <div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{update.title}</p><p className="text-[11px] text-zinc-500">{new Date(update.createdAt).toLocaleString('he-IL')} · {update.authorName}</p></div>
+            <button onClick={() => deleteUpdate(update.id)} className="shrink-0 rounded-lg p-2 text-zinc-500 transition hover:bg-rose-500/10 hover:text-rose-400" title="מחק עדכון"><Trash2 className="h-4 w-4" /></button>
+          </div>)}
+        </div>}
+      </section>
 
       {/* Music Providers Section */}
       <section className="p-6 rounded-2xl bg-[#13151d] border border-white/5 space-y-4">

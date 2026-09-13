@@ -11,6 +11,7 @@ export const translations = {
     navAdmin: 'ניהול מערכת',
     navLiked: 'שירים שאהבתי',
     navDownloads: 'הורדות',
+    navUpdates: 'עדכונים',
 
     // Greetings
     greetingMorning: 'בוקר טוב',
@@ -137,6 +138,13 @@ export const translations = {
 
     // Admin
     adminDashboardTitle: 'לוח בקרת מנהל - פשוט מוזיקה',
+    adminDashboard: 'לוח בקרת מנהל',
+    adminUsers: 'משתמשים',
+    adminSongs: 'שירים בקטלוג',
+    adminArtists: 'אמנים',
+    adminPlaylists: 'פלייליסטים',
+    adminProviders: 'ספקי שמע',
+    adminPlaybackErrors: 'שגיאות ניגון',
     totalUsers: 'סך משתמשים',
     activeUsers: 'משתמשים פעילים',
     totalTracks: 'סך שירים בקטלוג',
@@ -170,6 +178,7 @@ export const translations = {
     navAdmin: 'Admin',
     navLiked: 'Liked Songs',
     navDownloads: 'Downloads',
+    navUpdates: 'Updates',
 
     // Greetings
     greetingMorning: 'Good morning',
@@ -296,6 +305,13 @@ export const translations = {
 
     // Admin
     adminDashboardTitle: 'Admin Dashboard - Simply Music',
+    adminDashboard: 'Admin Dashboard',
+    adminUsers: 'Users',
+    adminSongs: 'Catalog Songs',
+    adminArtists: 'Artists',
+    adminPlaylists: 'Playlists',
+    adminProviders: 'Audio Providers',
+    adminPlaybackErrors: 'Playback Errors',
     totalUsers: 'Total Users',
     activeUsers: 'Active Accounts',
     totalTracks: 'Tracks in Catalog',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Search, Library, ArrowDownToLine, Settings } from 'lucide-react';
+import { Home, Search, Library, Bell, ArrowDownToLine, Settings } from 'lucide-react';
 import { ActiveTab, ActiveView } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -61,6 +61,17 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeView, on
         >
           <ArrowDownToLine className="w-5 h-5" />
           <span className="text-[10px] font-medium">{t('navDownloads')}</span>
+        </button>
+
+        <button
+          id="mobile-nav-updates"
+          onClick={() => onNavigateTab('updates')}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition ${
+            isCurrentTab('updates') ? 'text-blue-400' : 'text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <Bell className="w-5 h-5" />
+          <span className="text-[10px] font-medium">{t('navUpdates')}</span>
         </button>
 
         <button

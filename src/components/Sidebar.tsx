@@ -13,6 +13,7 @@ import {
   Monitor,
   Sliders,
   Moon,
+  Bell,
 } from 'lucide-react';
 import { ActiveTab, ActiveView } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -135,6 +136,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <ArrowDownToLine className="w-4 h-4" />
           <span>{t('navDownloads')}</span>
+        </button>
+
+        <button
+          id="nav-updates-btn"
+          onClick={() => onNavigateTab('updates')}
+          className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
+            isCurrentTab('updates') ? 'bg-blue-500/15 text-blue-300 font-semibold' : 'text-zinc-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Bell className="w-4 h-4" />
+          <span>{t('navUpdates')}</span>
         </button>
       </div>
 

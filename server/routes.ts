@@ -623,14 +623,21 @@ apiRouter.get('/music/search', async (req, res) => {
 // ==========================================
 // 5. ARTIST & ALBUM PAGES
 // ==========================================
-apiRouter.get('/music/artist/:id', async (req, res) => {
+apiRouter.get('/music/artist/:id', async (req: AuthenticatedRequest, res) => {
   const provider = musicService.getActiveProvider();
   const data = await provider.getArtist(req.params.id);
   if (!data) {
     res.status(404).json({ error: 'Artist not found.' });
     return;
   }
-  res.json(data);
+  res.json({
+    ...data,
+    artist: {
+      ...data.artist,
+      followerCount: db.getArtistFollowerCount(data.artist.id),
+    },
+    isFollowing: req.user ? db.getFollowedArtists(req.user.id).includes(data.artist.id) : false,
+  });
 });
 
 apiRouter.get('/music/album/:id', async (req, res) => {
@@ -927,6 +934,42 @@ apiRouter.put('/playlists/:id/reorder', requireAuth, (req: AuthenticatedRequest,
 // ==========================================
 // 9. ADMIN SYSTEM
 // ==========================================
+apiRouter.get('/updates', (req, res) => {
+  res.json({ updates: db.getUpdates() });
+});
+
+apiRouter.post('/admin/updates', requireAuth, requireAdmin, (req: AuthenticatedRequest, res) => {
+  const title = String(req.body.title || '').trim();
+  const body = String(req.body.body || '').trim();
+  const type = String(req.body.type || 'info');
+  const allowedTypes = new Set(['info', 'feature', 'fix', 'important']);
+
+  if (!title || !body) {
+    res.status(400).json({ error: 'כותרת ותוכן העדכון הם שדות חובה.' });
+    return;
+  }
+  if (title.length > 120 || body.length > 5000 || !allowedTypes.has(type)) {
+    res.status(400).json({ error: 'פרטי העדכון אינם תקינים.' });
+    return;
+  }
+
+  const update = db.createUpdate({
+    title,
+    body,
+    type: type as 'info' | 'feature' | 'fix' | 'important',
+    authorName: req.user!.displayName || req.user!.username,
+  });
+  res.status(201).json({ update });
+});
+
+apiRouter.delete('/admin/updates/:id', requireAuth, requireAdmin, (req, res) => {
+  if (!db.deleteUpdate(req.params.id)) {
+    res.status(404).json({ error: 'העדכון לא נמצא.' });
+    return;
+  }
+  res.json({ deleted: true });
+});
+
 apiRouter.get('/admin/stats', requireAuth, requireAdmin, (req, res) => {
   const users = db.getUsers();
   const songs = db.getSongs();
