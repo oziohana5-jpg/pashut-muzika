@@ -757,30 +757,34 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } else if (targetSong.youtubeId) {
       startYtPlayback(targetSong.youtubeId);
     } else {
-      // Existing catalog songs may not have a direct URL. Resolve them through
-      // Jamendo instead of silently falling back to a YouTube iframe.
+      // Catalog results without an ID are resolved through YouTube.
       const controller = new AbortController();
       const resolveTimeout = window.setTimeout(() => controller.abort(), 9000);
-      fetch(`/api/music/search?q=${encodeURIComponent(`${targetSong.title} ${targetSong.artistName}`)}&filter=songs`, {
+      fetch(`/api/music/resolve-youtube?title=${encodeURIComponent(targetSong.title)}&artist=${encodeURIComponent(targetSong.artistName)}&songId=${encodeURIComponent(targetSong.id)}`, {
         signal: controller.signal,
       })
         .then(res => res.json())
         .then(data => {
           window.clearTimeout(resolveTimeout);
-          const directMatch = (data.songs || []).find((candidate: Song) =>
-            candidate.provider === 'jamendo_legal' &&
-            Boolean(candidate.streamUrl) &&
-            isSameSong(candidate, targetSong)
-          );
-          if (directMatch && playbackRef.current.currentSong?.id === targetSong.id) {
-            playDirectAudio(directMatch);
+          if (data.youtubeId && playbackRef.current.currentSong?.id === targetSong.id) {
+            const updated = {
+              ...targetSong,
+              youtubeId: data.youtubeId,
+              duration: data.duration || targetSong.duration,
+            };
+            setPlayback(prev => ({
+              ...prev,
+              currentSong: updated,
+              duration: data.duration || prev.duration,
+            }));
+            startYtPlayback(data.youtubeId);
             return;
           }
-          fallbackToYouTube();
+          setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
         })
         .catch(() => {
           window.clearTimeout(resolveTimeout);
-          fallbackToYouTube();
+          setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
         });
     }
 
