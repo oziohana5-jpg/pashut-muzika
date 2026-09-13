@@ -741,7 +741,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const hasDirectAudio = Boolean(
       targetSong.streamUrl &&
       !isPreviewOnlyStream &&
-      targetSong.provider !== 'youtube'
+      targetSong.provider !== 'youtube' &&
+      !isPlaceholderStream
     );
 
     if (hasDirectAudio && audioRef.current) {

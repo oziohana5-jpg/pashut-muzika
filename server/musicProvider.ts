@@ -671,7 +671,8 @@ export class LicensedCatalogProvider implements MusicProvider {
 
     // iTunes only exposes short promotional previews. Never advertise those
     // previews as full-length streams or use them for background playback.
-    const isPreviewOnly = song.id.startsWith('itunes-') || !song.streamUrl;
+    const isPlaceholderStream = /soundhelix\.com|example\.com/i.test(song.streamUrl || '');
+    const isPreviewOnly = song.id.startsWith('itunes-') || !song.streamUrl || isPlaceholderStream;
 
     // Direct authorized audio stream
     return {

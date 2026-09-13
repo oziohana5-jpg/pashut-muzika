@@ -23,7 +23,8 @@ function sanitizeUser(user: User) {
 }
 
 function isPlayableSong(song: Song): boolean {
-  return song.isFullLength && !song.id.startsWith('itunes-') && Boolean(song.youtubeId || song.streamUrl);
+  const hasPlaceholderStream = /soundhelix\.com|example\.com/i.test(song.streamUrl || '');
+  return song.isFullLength && !song.id.startsWith('itunes-') && Boolean(song.youtubeId || (song.streamUrl && !hasPlaceholderStream));
 }
 
 // ==========================================
