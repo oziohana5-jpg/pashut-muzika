@@ -714,20 +714,30 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       startYtPlayback(targetSong.youtubeId);
     } else {
       activeEngineRef.current = 'youtube';
-      fetch(`/api/music/resolve-youtube?title=${encodeURIComponent(targetSong.title)}&artist=${encodeURIComponent(targetSong.artistName)}`)
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+      fetch(`/api/music/resolve-youtube?title=${encodeURIComponent(targetSong.title)}&artist=${encodeURIComponent(targetSong.artistName)}`, {
+        signal: controller.signal,
+      })
         .then(res => res.json())
         .then(data => {
+          window.clearTimeout(timeoutId);
           if (data.youtubeId && playbackRef.current.currentSong?.id === targetSong.id) {
             const updated = { ...targetSong, youtubeId: data.youtubeId, duration: data.duration || targetSong.duration };
             setPlayback(prev => ({ ...prev, currentSong: updated, duration: data.duration || prev.duration }));
             startYtPlayback(data.youtubeId);
+          } else {
+            setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
           }
         })
         .catch(() => {
+          window.clearTimeout(timeoutId);
           if (targetSong.streamUrl && !isPreviewOnlyStream && !isPlaceholderStream && audioRef.current) {
             activeEngineRef.current = 'audio';
             audioRef.current.src = targetSong.streamUrl;
             audioRef.current.play().catch(console.warn);
+          } else {
+            setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
           }
         });
     }
