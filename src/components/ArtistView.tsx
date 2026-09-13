@@ -5,6 +5,7 @@ import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatTime, formatNumber } from '../utils/formatters';
+import { DEFAULT_ARTIST_IMAGE, handleImageError } from '../utils/imageFallback';
 
 interface ArtistViewProps {
   artistId: string;
@@ -36,7 +37,10 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
     fetch(`/api/music/artist/${artistId}${query}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Artist request failed: ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         setArtist(data.artist);
         setSongs(data.topTracks || data.popularSongs || []);
@@ -44,7 +48,14 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
         setIsFollowing(data.isFollowing || false);
         setFollowerCount(data.artist?.followerCount || 0);
       })
-      .catch((err) => console.error('Failed to load artist:', err))
+      .catch((err) => {
+        console.error('Failed to load artist:', err);
+        if (cachedArtist) {
+          setArtist(cachedArtist);
+          setSongs([]);
+          setAlbums([]);
+        }
+      })
       .finally(() => setLoading(false));
   }, [artistId, token]);
 
@@ -96,12 +107,12 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
     <div className="pb-28 text-right">
       <section className="relative isolate overflow-hidden border-b border-white/10 bg-[#0e1118]">
         <div className="absolute inset-0 -z-20">
-          <img src={artist.imageUrl} alt="" className="h-full w-full object-cover opacity-20 blur-2xl" />
+            <img src={artist.imageUrl || DEFAULT_ARTIST_IMAGE} alt="" onError={(event) => handleImageError(event, DEFAULT_ARTIST_IMAGE)} className="h-full w-full object-cover opacity-20 blur-2xl" />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,#080a0f_8%,rgba(8,10,15,.9)_58%,rgba(8,10,15,.55)),linear-gradient(0deg,#0a0b0e_0%,transparent_70%)]" />
         </div>
         <div className="mx-auto grid min-h-[430px] max-w-6xl items-end gap-7 px-5 pb-9 pt-16 sm:grid-cols-[240px_1fr] sm:gap-10 sm:px-10 sm:pb-12">
           <div className="group relative aspect-[4/5] w-40 overflow-hidden rounded-[26px] border border-white/20 bg-zinc-900 shadow-2xl shadow-black/50 sm:w-60">
-            <img src={artist.imageUrl} alt={artist.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+            <img src={artist.imageUrl || DEFAULT_ARTIST_IMAGE} alt={artist.name} onError={(event) => handleImageError(event, DEFAULT_ARTIST_IMAGE)} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
             <div className="absolute bottom-3 start-3 rounded-full border border-white/15 bg-black/45 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur">Simply Music Artist</div>
           </div>
