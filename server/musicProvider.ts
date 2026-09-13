@@ -701,13 +701,7 @@ export class JamendoProvider implements MusicProvider {
   }
 
   public async search(query: string, filter?: string): Promise<SearchResult> {
-    const songs = await fetchJamendoTracks(query.trim() ? { search: query.trim() } : {});
-    return {
-      songs,
-      artists: [],
-      albums: [],
-      playlists: [],
-    };
+    return defaultMusicProvider.search(query, filter);
   }
 
   public async getTrack(trackId: string): Promise<Song | null> {
