@@ -585,8 +585,18 @@ apiRouter.get('/music/search', async (req, res) => {
   const q = String(req.query.q || '');
   const filter = String(req.query.filter || 'all');
   const provider = musicService.getActiveProvider();
-  const results = await provider.search(q, filter);
-  res.json(results);
+  try {
+    const results = await provider.search(q, filter);
+    const hasResults = results.songs.length > 0 || results.artists.length > 0 || results.albums.length > 0 || results.playlists.length > 0;
+    if (!hasResults && provider.id !== 'licensed_catalog') {
+      res.json(await defaultMusicProvider.search(q, filter));
+      return;
+    }
+    res.json(results);
+  } catch (error) {
+    console.error('Music search provider failed:', error);
+    res.json(await defaultMusicProvider.search(q, filter));
+  }
 });
 
 // ==========================================
