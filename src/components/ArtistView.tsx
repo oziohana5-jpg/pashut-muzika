@@ -21,6 +21,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
   const [albums, setAlbums] = useState<Album[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [showVerifiedInfo, setShowVerifiedInfo] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -104,8 +105,25 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
             </div>
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-[.22em] text-zinc-500">Artist profile</p>
-              <h1 className="text-4xl font-black tracking-tight text-white sm:text-7xl">{artist.nameHe || artist.name}</h1>
-              {artist.verified && <CheckCircle className="h-7 w-7 shrink-0 fill-blue-500 text-white sm:h-9 sm:w-9" />}
+              <div className="relative flex items-center gap-2">
+                <h1 className="min-w-0 text-4xl font-black tracking-tight text-white sm:text-7xl">{artist.nameHe || artist.name}</h1>
+                {artist.verified && (
+                  <button
+                    type="button"
+                    onClick={() => setShowVerifiedInfo((current) => !current)}
+                    className="relative shrink-0 rounded-full p-0.5 text-white transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    aria-label={language === 'he' ? 'אמן מאומת' : 'Verified artist'}
+                    title={language === 'he' ? 'אמן מאומת' : 'Verified artist'}
+                  >
+                    <CheckCircle className="h-7 w-7 fill-blue-500 text-white drop-shadow-lg sm:h-9 sm:w-9" />
+                    {showVerifiedInfo && (
+                      <span className="absolute start-1/2 top-full z-20 mt-2 w-max -translate-x-1/2 rounded-lg border border-blue-400/30 bg-[#111827] px-3 py-2 text-[11px] font-semibold text-blue-100 shadow-xl">
+                        {language === 'he' ? 'אמן/ית מאומת/ת' : 'Verified artist'}
+                      </span>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
             <p className="max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">{artist.bioHe || artist.bio}</p>
             <div className="grid max-w-xl grid-cols-2 gap-2 sm:grid-cols-3">
