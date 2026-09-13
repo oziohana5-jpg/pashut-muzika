@@ -31,14 +31,14 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header
       id="top-application-header"
-      className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-8 py-3 bg-white/90 backdrop-blur-md border-b border-slate-200"
+      className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-8 py-3 bg-[#0a0b0e]/80 backdrop-blur-md border-b border-white/5"
     >
       {/* Back / Navigation Controls */}
       <div className="flex items-center gap-2">
         {canGoBack && onGoBack && (
           <button
             onClick={onGoBack}
-            className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition"
+            className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition"
             aria-label="Back"
           >
             {direction === 'rtl' ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         <div className="flex items-center gap-2 md:hidden">
           <img src="/logo.png" alt="פשוט מוזיקה" className="w-7 h-7 object-contain" />
-          <span className="font-bold text-sm tracking-tight text-slate-900">
+          <span className="font-bold text-sm tracking-tight text-white">
             {t('appName')}
           </span>
         </div>
@@ -59,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           id="btn-switch-language"
           onClick={toggleLanguage}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-medium text-slate-600 hover:text-slate-900 border border-slate-200 transition"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-xs font-medium text-zinc-300 hover:text-white border border-white/10 transition"
           title="Switch Language"
         >
           <Globe className="w-3.5 h-3.5 text-zinc-400" />
@@ -91,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="btn-header-login"
             onClick={onOpenAuthModal}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-xs font-semibold text-white shadow-md shadow-blue-600/20 transition"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white shadow-md shadow-blue-600/25 transition"
           >
             <LogIn className="w-3.5 h-3.5" />
             <span>{t('login')}</span>
