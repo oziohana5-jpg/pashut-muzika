@@ -30,7 +30,6 @@ export interface MusicProvider {
   getStream(trackId: string): Promise<StreamInfo | null>;
 }
 
-const FALLBACK_STREAMS: string[] = [];
 const JAMENDO_API = 'https://api.jamendo.com/v3.0';
 
 type JamendoTrack = {
@@ -145,8 +144,7 @@ async function fetchOnlineCatalog(query: string, filter?: string): Promise<{ son
             ? item.artworkUrl100.replace('100x100bb', '600x600bb')
             : 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80';
 
-          const fallbackStream = FALLBACK_STREAMS[Math.abs(item.trackId) % FALLBACK_STREAMS.length];
-          const streamUrl = item.previewUrl || fallbackStream;
+          const streamUrl = '';
 
           const song: Song = {
             id: songId,
@@ -165,9 +163,9 @@ async function fetchOnlineCatalog(query: string, filter?: string): Promise<{ son
             audioFormat: 'aac',
             bitrate: 256,
             plays: Math.floor(Math.random() * 150000) + 15000,
-            isFullLength: true,
+            isFullLength: false,
             lyrics: undefined,
-            licenseInfo: 'Licensed Catalog Master Stream',
+            licenseInfo: 'Metadata only; iTunes preview is not a full track',
           };
 
           songs.push(song);
@@ -271,7 +269,7 @@ export async function searchYouTubeTracks(query: string): Promise<Song[]> {
           duration: durationSec,
           releaseDate: '2024-01-01',
           genre: 'Israeli Pop',
-          streamUrl: FALLBACK_STREAMS[songs.length % FALLBACK_STREAMS.length],
+          streamUrl: '',
           youtubeId: v.videoId,
           provider: 'youtube',
           audioFormat: 'aac',
@@ -398,13 +396,16 @@ export class LicensedCatalogProvider implements MusicProvider {
 
     // 1. Match local library
     const matchedSongs = (filter === 'all' || filter === 'songs' || !filter)
-      ? allSongs.filter(s =>
-          s.title.toLowerCase().includes(q) ||
-          (s.titleHe && s.titleHe.includes(q)) ||
-          s.artistName.toLowerCase().includes(q) ||
-          s.albumName.toLowerCase().includes(q) ||
-          s.genre.toLowerCase().includes(q)
-        )
+      ? allSongs.filter(s => {
+          const isPlayable = !s.id.startsWith('itunes-') && (Boolean(s.youtubeId) || Boolean(s.streamUrl));
+          return isPlayable && (
+            s.title.toLowerCase().includes(q) ||
+            Boolean(s.titleHe && s.titleHe.includes(q)) ||
+            s.artistName.toLowerCase().includes(q) ||
+            s.albumName.toLowerCase().includes(q) ||
+            s.genre.toLowerCase().includes(q)
+          );
+        })
       : [];
 
     const matchedArtists = (filter === 'all' || filter === 'artists' || !filter)
@@ -440,9 +441,11 @@ export class LicensedCatalogProvider implements MusicProvider {
     const songMap = new Map<string, Song>();
     matchedSongs.forEach(s => songMap.set(s.id, s));
     ytSongs.forEach(s => songMap.set(s.id, s));
-    onlineResults.songs.forEach(s => {
-      if (!songMap.has(s.id)) songMap.set(s.id, s);
-    });
+    onlineResults.songs
+      .filter(s => s.isFullLength && Boolean(s.streamUrl))
+      .forEach(s => {
+        if (!songMap.has(s.id)) songMap.set(s.id, s);
+      });
 
     const artistMap = new Map<string, Artist>();
     matchedArtists.forEach(a => artistMap.set(a.id, a));
@@ -498,7 +501,6 @@ export class LicensedCatalogProvider implements MusicProvider {
             for (let i = 1; i < data.results.length; i++) {
               const item = data.results[i];
               if (item.trackId) {
-                const fallbackStream = FALLBACK_STREAMS[Math.abs(item.trackId) % FALLBACK_STREAMS.length];
                 const s: Song = {
                   id: `itunes-${item.trackId}`,
                   title: item.trackName,
@@ -511,13 +513,13 @@ export class LicensedCatalogProvider implements MusicProvider {
                   duration: Math.round((item.trackTimeMillis || 215000) / 1000),
                   releaseDate: item.releaseDate ? item.releaseDate.substring(0, 10) : '2024-01-01',
                   genre: item.primaryGenreName || 'Pop',
-                  streamUrl: item.previewUrl || fallbackStream,
+                  streamUrl: '',
                   provider: 'licensed_catalog',
                   audioFormat: 'aac',
                   bitrate: 256,
                   plays: Math.floor(Math.random() * 80000) + 5000,
-                  isFullLength: true,
-                  licenseInfo: 'Licensed Catalog Master Stream',
+                  isFullLength: false,
+                  licenseInfo: 'Metadata only; iTunes preview is not a full track',
                 };
                 db.upsertSong(s);
               }
@@ -574,7 +576,6 @@ export class LicensedCatalogProvider implements MusicProvider {
                   db.upsertArtist(artist);
                 }
 
-                const fallbackStream = FALLBACK_STREAMS[Math.abs(item.trackId) % FALLBACK_STREAMS.length];
                 const s: Song = {
                   id: songId,
                   title: item.trackName,
@@ -587,13 +588,13 @@ export class LicensedCatalogProvider implements MusicProvider {
                   duration: Math.round((item.trackTimeMillis || 215000) / 1000),
                   releaseDate: item.releaseDate ? item.releaseDate.substring(0, 10) : '2024-01-01',
                   genre: item.primaryGenreName || 'Pop',
-                  streamUrl: item.previewUrl || fallbackStream,
+                  streamUrl: '',
                   provider: 'licensed_catalog',
                   audioFormat: 'aac',
                   bitrate: 256,
                   plays: Math.floor(Math.random() * 100000) + 10000,
-                  isFullLength: true,
-                  licenseInfo: 'Licensed Catalog Master Stream',
+                  isFullLength: false,
+                  licenseInfo: 'Metadata only; iTunes preview is not a full track',
                 };
                 db.upsertSong(s);
               }
@@ -650,13 +651,13 @@ export class LicensedCatalogProvider implements MusicProvider {
               duration: Math.round((item.trackTimeMillis || 215000) / 1000),
               releaseDate: item.releaseDate ? item.releaseDate.substring(0, 10) : '2024-01-01',
               genre: item.primaryGenreName || 'Pop',
-              streamUrl: item.previewUrl || FALLBACK_STREAMS[0],
+              streamUrl: '',
               provider: 'licensed_catalog',
               audioFormat: 'aac',
               bitrate: 256,
               plays: 25000,
-              isFullLength: true,
-              licenseInfo: 'Licensed Catalog Master Stream',
+              isFullLength: false,
+              licenseInfo: 'Metadata only; iTunes preview is not a full track',
             };
             db.upsertSong(song);
           }
@@ -670,11 +671,11 @@ export class LicensedCatalogProvider implements MusicProvider {
 
     // iTunes only exposes short promotional previews. Never advertise those
     // previews as full-length streams or use them for background playback.
-    const isPreviewOnly = song.id.startsWith('itunes-');
+    const isPreviewOnly = song.id.startsWith('itunes-') || !song.streamUrl;
 
     // Direct authorized audio stream
     return {
-      streamUrl: song.streamUrl,
+      streamUrl: isPreviewOnly ? '' : song.streamUrl,
       format: song.audioFormat,
       bitrate: song.bitrate,
       isFullLength: Boolean(song.streamUrl) && !isPreviewOnly && song.isFullLength,

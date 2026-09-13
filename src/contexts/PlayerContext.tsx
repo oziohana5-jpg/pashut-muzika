@@ -696,7 +696,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       .catch(() => {});
 
     const isPlaceholderStream = /soundhelix\.com|example\.com/i.test(targetSong.streamUrl || '');
-    const isPreviewOnlyStream = targetSong.id.startsWith('itunes-');
+    const isPreviewOnlyStream = targetSong.id.startsWith('itunes-') || !targetSong.isFullLength;
     const hasDirectAudio = Boolean(
       targetSong.streamUrl &&
       !targetSong.youtubeId &&
@@ -745,13 +745,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         })
         .catch(() => {
           window.clearTimeout(timeoutId);
-          if (targetSong.streamUrl && !isPreviewOnlyStream && !isPlaceholderStream && audioRef.current) {
-            activeEngineRef.current = 'audio';
-            audioRef.current.src = targetSong.streamUrl;
-            audioRef.current.play().catch(console.warn);
-          } else {
-            setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
-          }
+          setPlayback(prev => ({
+            ...prev,
+            isPlaying: false,
+            isBuffering: false,
+            error: isPreviewOnlyStream ? 'לשיר הזה אין מקור שמע מלא וזמין להפעלה.' : t('songUnavailable'),
+          }));
         });
     }
 

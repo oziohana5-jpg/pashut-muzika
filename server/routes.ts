@@ -22,6 +22,10 @@ function sanitizeUser(user: User) {
   return rest;
 }
 
+function isPlayableSong(song: Song): boolean {
+  return song.isFullLength && !song.id.startsWith('itunes-') && Boolean(song.youtubeId || song.streamUrl);
+}
+
 // ==========================================
 // 1. AUTHENTICATION & USER ACCOUNTS
 // ==========================================
@@ -362,7 +366,7 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
   try {
     const { songId } = req.params;
     const currentSong = db.getSongById(songId);
-    const allSongs = db.getSongs();
+    const allSongs = db.getSongs().filter(isPlayableSong);
 
     let targetArtistName = currentSong?.artistName || '';
     let targetGenre = currentSong?.genre || '';
@@ -535,7 +539,7 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
 // ==========================================
 apiRouter.get('/music/home', async (req: AuthenticatedRequest, res) => {
   const userId = req.user?.id;
-  const allSongs = db.getSongs();
+  const allSongs = db.getSongs().filter(isPlayableSong);
   const allArtists = db.getArtists();
   const allAlbums = db.getAlbums();
   const allPlaylists = db.getPlaylists().filter(p => p.isPublic);
@@ -546,7 +550,7 @@ apiRouter.get('/music/home', async (req: AuthenticatedRequest, res) => {
     const recent = db.getRecentlyPlayed(userId);
     recentlyPlayedSongs = recent
       .map(r => db.getSongById(r.songId))
-      .filter((s): s is Song => Boolean(s))
+      .filter((s): s is Song => Boolean(s) && isPlayableSong(s))
       .slice(0, 8);
   }
   if (recentlyPlayedSongs.length === 0) {
@@ -615,7 +619,7 @@ apiRouter.get('/music/album/:id', async (req, res) => {
 // 6. RECOMMENDATIONS ENGINE
 // ==========================================
 apiRouter.get('/music/recommendations', async (req: AuthenticatedRequest, res) => {
-  const allSongs = db.getSongs();
+  const allSongs = db.getSongs().filter(isPlayableSong);
   const allArtists = db.getArtists();
   const allAlbums = db.getAlbums();
   const allPlaylists = db.getPlaylists().filter(p => p.isPublic);
