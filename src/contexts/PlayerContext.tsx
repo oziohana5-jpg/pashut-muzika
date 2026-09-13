@@ -685,14 +685,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (audioRef.current) {
         audioRef.current.pause();
       }
-      if (isMobilePlayback) {
-        const host = document.getElementById('youtube-player-host');
-        const iframe = host?.querySelector('iframe') as HTMLIFrameElement | null;
-        if (iframe) {
-          iframe.src = `https://www.youtube.com/embed/${encodeURIComponent(ytId)}?autoplay=1&controls=1&playsinline=1&rel=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin)}`;
-          setPlayback(prev => ({ ...prev, isPlaying: true, isBuffering: false, error: null }));
-          return;
-        }
+      const host = document.getElementById('youtube-player-host');
+      const iframe = host?.querySelector('iframe') as HTMLIFrameElement | null;
+      if (iframe) {
+        iframe.src = `https://www.youtube.com/embed/${encodeURIComponent(ytId)}?autoplay=1&controls=1&playsinline=1&rel=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin)}`;
+        setPlayback(prev => ({ ...prev, isPlaying: true, isBuffering: false, error: null }));
+        return;
       }
       if (isYtReadyRef.current && ytPlayerRef.current?.loadVideoById) {
         ytPlayerRef.current.loadVideoById(ytId);
