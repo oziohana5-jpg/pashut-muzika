@@ -751,6 +751,14 @@ export class MusicService {
   }
 
   public getActiveProvider(): MusicProvider {
+    const configuredProvider = process.env.MUSIC_PROVIDER?.trim().toLowerCase();
+    const configuredId = configuredProvider === 'jamendo' ? 'jamendo_legal' : configuredProvider;
+
+    if (configuredId) {
+      const configured = this.providers.get(configuredId);
+      if (configured?.isEnabled()) return configured;
+    }
+
     // Check highest priority enabled provider
     const provConfigs = db.getProviders().sort((a, b) => a.priority - b.priority);
     for (const conf of provConfigs) {
