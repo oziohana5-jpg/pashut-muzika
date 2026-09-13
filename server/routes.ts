@@ -238,7 +238,10 @@ apiRouter.get('/stream/:trackId', async (req, res) => {
   const { trackId } = req.params;
   const provider = musicService.getActiveProvider();
   const song = db.getSongById(trackId);
-  const streamInfo = await provider.getStream(trackId) || (song?.streamUrl ? {
+  const jamendoProvider = trackId.startsWith('jamendo-')
+    ? musicService.getProvider('jamendo_legal')
+    : undefined;
+  const streamInfo = await (jamendoProvider || provider).getStream(trackId) || (song?.streamUrl ? {
     streamUrl: song.streamUrl,
     format: song.audioFormat,
     bitrate: song.bitrate,
