@@ -1114,7 +1114,9 @@ class Database {
 
   // Songs
   public getSongs(): Song[] {
-    if (!Array.isArray(this.data.songs) || this.data.songs.length === 0) {
+    const onlyJamendoSongs = Array.isArray(this.data.songs) && this.data.songs.length > 0
+      && this.data.songs.every(song => song.provider === 'jamendo_legal');
+    if (!Array.isArray(this.data.songs) || this.data.songs.length === 0 || onlyJamendoSongs) {
       this.data.songs = [...initialSongs];
       this.save();
     }
