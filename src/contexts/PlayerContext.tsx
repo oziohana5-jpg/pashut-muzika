@@ -67,6 +67,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const isYtReadyRef = useRef<boolean>(false);
   const activeEngineRef = useRef<'youtube' | 'audio'>('youtube');
   const pendingVideoIdRef = useRef<string | null>(null);
+  const ytStartTimeoutRef = useRef<number | null>(null);
 
   const [playback, setPlayback] = useState<PlaybackState>(() => {
     let savedVol = 0.85;
@@ -363,12 +364,17 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
                 if (pendingVideoIdRef.current) {
                   event.target.loadVideoById(pendingVideoIdRef.current);
+                  event.target.playVideo();
                   pendingVideoIdRef.current = null;
                 }
               },
               onStateChange: (event: any) => {
                 // YT.PlayerState: 1 = PLAYING, 2 = PAUSED, 3 = BUFFERING, 0 = ENDED
                 if (event.data === 1) {
+                  if (ytStartTimeoutRef.current !== null) {
+                    window.clearTimeout(ytStartTimeoutRef.current);
+                    ytStartTimeoutRef.current = null;
+                  }
                   setPlayback(prev => ({ ...prev, isPlaying: true, isBuffering: false, error: null }));
                 } else if (event.data === 2) {
                   setPlayback(prev => ({ ...prev, isPlaying: false }));
@@ -380,12 +386,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               },
               onError: (err: any) => {
                 console.warn('YouTube Player playback warning:', err);
-                const cur = playbackRef.current.currentSong;
-                if (cur && audioRef.current) {
-                  activeEngineRef.current = 'audio';
-                  audioRef.current.src = `/api/stream/${cur.id}`;
-                  audioRef.current.play().catch(console.warn);
+                if (ytStartTimeoutRef.current !== null) {
+                  window.clearTimeout(ytStartTimeoutRef.current);
+                  ytStartTimeoutRef.current = null;
                 }
+                setPlayback(prev => ({
+                  ...prev,
+                  isPlaying: false,
+                  isBuffering: false,
+                  error: t('songUnavailable'),
+                }));
               },
             },
           });
@@ -656,6 +666,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const startYtPlayback = (ytId: string) => {
       activeEngineRef.current = 'youtube';
+      if (ytStartTimeoutRef.current !== null) {
+        window.clearTimeout(ytStartTimeoutRef.current);
+      }
+      ytStartTimeoutRef.current = window.setTimeout(() => {
+        ytStartTimeoutRef.current = null;
+        if (playbackRef.current.currentSong?.id === targetSong.id && playbackRef.current.isBuffering) {
+          setPlayback(prev => ({
+            ...prev,
+            isPlaying: false,
+            isBuffering: false,
+            error: t('songUnavailable'),
+          }));
+        }
+      }, 10000);
       if (audioRef.current) {
         audioRef.current.pause();
       }
