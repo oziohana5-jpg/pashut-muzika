@@ -5,12 +5,8 @@ services:
   - type: web
     name: simply-music
     env: node
-    plan: starter
+    plan: free
     region: frankfurt
-    disk:
-      name: simply-music-data
-      mountPath: /var/data
-      sizeGB: 1
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
@@ -21,8 +17,6 @@ services:
         value: 3000
       - key: JWT_SECRET
         generateValue: true
-      - key: DATA_DIR
-        value: /var/data
       - key: MONGODB_URI
         sync: false
       - key: MONGODB_DB
