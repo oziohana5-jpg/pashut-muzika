@@ -338,10 +338,10 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
           </div>
 
           {/* Central Media Slot: Vinyl with YouTube Progress Ring OR Synced Lyrics */}
-          <div className="relative w-full max-w-[340px] sm:max-w-[420px] flex items-center justify-center mb-6 min-h-[330px] sm:min-h-[380px]">
+          <div className="relative flex w-full max-w-[min(100%,420px)] items-center justify-center overflow-visible mb-6 min-h-[min(84vw,330px)] sm:min-h-[380px]">
             {/* 1. VINYL RECORD VIEW WITH YOUTUBE MUSIC PROGRESS RING */}
             {activeTab === 'vinyl' && (
-              <div className="relative w-[320px] h-[320px] sm:w-[360px] sm:h-[360px] flex items-center justify-center select-none">
+              <div className="relative aspect-square w-[min(84vw,320px)] sm:w-[min(72vw,360px)] flex items-center justify-center select-none">
                 {/* Ambient Acoustic Equalizer Aura Line (YouTube Music style pulse behind circle) */}
                 <div
                   className={`absolute inset-0 rounded-full border-2 border-red-500/25 pointer-events-none transition-all duration-1000 ${
@@ -437,7 +437,7 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
                   style={{
                     animationPlayState: playback.isPlaying ? 'running' : 'paused',
                   }}
-                  className="relative z-10 w-[270px] h-[270px] sm:w-[305px] sm:h-[305px] rounded-full bg-[#0d0e12] border-4 border-zinc-800 shadow-2xl shadow-black flex items-center justify-center cursor-pointer animate-[spin_18s_linear_infinite] hover:scale-[1.01] transition-transform duration-300"
+                  className="relative z-10 h-[84%] w-[84%] rounded-full bg-[#0d0e12] border-4 border-zinc-800 shadow-2xl shadow-black flex items-center justify-center cursor-pointer animate-[spin_18s_linear_infinite] hover:scale-[1.01] transition-transform duration-300"
                   title={playback.isPlaying ? 'לחץ לעצירה' : 'לחץ להשמעה'}
                 >
                   {/* Concentric Grooves */}
@@ -452,12 +452,12 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
                   <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/[0.03] via-transparent to-white/[0.03] pointer-events-none" />
 
                   {/* Center Record Label with Circular Album Cover */}
-                  <div className="relative w-[125px] h-[125px] sm:w-[145px] sm:h-[145px] rounded-full overflow-hidden border-4 border-zinc-900 shadow-inner flex items-center justify-center">
+                  <div className="relative h-[43%] w-[43%] rounded-full overflow-hidden border-4 border-zinc-900 bg-black shadow-inner flex items-center justify-center">
                     <img
                       src={song.coverUrl}
                       alt={song.title}
                       onError={(e) => handleImageError(e, DEFAULT_ALBUM_COVER)}
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-contain"
                     />
 
                     {/* Spindle Center Hole */}

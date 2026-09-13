@@ -585,7 +585,7 @@ export class LicensedCatalogProvider implements MusicProvider {
     if (artistId.startsWith('itunes-art-')) {
       const numId = artistId.replace('itunes-art-', '');
       try {
-        const res = await fetch(`https://itunes.apple.com/lookup?id=${numId}&entity=song&limit=25`);
+        const res = await fetch(`https://itunes.apple.com/lookup?id=${numId}&entity=song&limit=200`);
         if (res.ok) {
           const data: any = await res.json();
           if (Array.isArray(data.results) && data.results.length > 0) {
@@ -653,7 +653,7 @@ export class LicensedCatalogProvider implements MusicProvider {
     artist = await fetchRealArtistImage(artist);
     db.upsertArtist(artist);
     const allTracks = db.getSongs().filter(s => s.artistId === artistId);
-    const topTracks = [...allTracks].sort((a, b) => b.plays - a.plays).slice(0, 20);
+    const topTracks = [...allTracks].sort((a, b) => b.plays - a.plays);
     const albums = db.getAlbums().filter(al => al.artistId === artistId);
     const singles = allTracks.filter(t => !albums.some(al => al.id === t.albumId));
     return { artist, topTracks, albums, singles };
