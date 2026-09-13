@@ -724,8 +724,21 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           window.clearTimeout(timeoutId);
           if (data.youtubeId && playbackRef.current.currentSong?.id === targetSong.id) {
             const updated = { ...targetSong, youtubeId: data.youtubeId, duration: data.duration || targetSong.duration };
-            setPlayback(prev => ({ ...prev, currentSong: updated, duration: data.duration || prev.duration }));
-            startYtPlayback(data.youtubeId);
+            const isMobilePlayback = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            setPlayback(prev => ({
+              ...prev,
+              currentSong: updated,
+              duration: data.duration || prev.duration,
+              isPlaying: !isMobilePlayback,
+              isBuffering: false,
+            }));
+            if (isMobilePlayback && isYtReadyRef.current && ytPlayerRef.current?.cueVideoById) {
+              // Mobile browsers require the final playVideo call to happen
+              // inside a user tap, so cue the video and wait for Play.
+              ytPlayerRef.current.cueVideoById(data.youtubeId);
+            } else {
+              startYtPlayback(data.youtubeId);
+            }
           } else {
             setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
           }
