@@ -3,6 +3,7 @@ import { Globe, User as UserIcon, LogIn, Shield, ChevronLeft, ChevronRight } fro
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ActiveTab, ActiveView } from '../types';
+import { UpdateNotifications } from './UpdateNotifications';
 
 interface HeaderProps {
   activeView: ActiveView;
@@ -23,7 +24,6 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { language, setLanguage, direction, t } = useLanguage();
   const { user } = useAuth();
-
   const toggleLanguage = () => {
     setLanguage(language === 'he' ? 'en' : 'he');
   };
