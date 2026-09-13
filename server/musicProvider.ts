@@ -700,11 +700,21 @@ export class JamendoProvider implements MusicProvider {
     if (filter && filter !== 'all' && filter !== 'songs') {
       return defaultMusicProvider.search(query, filter);
     }
-    const songs = await fetchJamendoTracks({ search: query.trim() });
-    if (songs.length > 0) {
-      return { songs, artists: [], albums: [], playlists: [] };
-    }
-    return defaultMusicProvider.search(query, filter);
+    const [jamendoSongs, catalogResults] = await Promise.all([
+      fetchJamendoTracks({ search: query.trim() }),
+      defaultMusicProvider.search(query, filter),
+    ]);
+    const songs = new Map<string, Song>();
+    jamendoSongs.forEach(song => songs.set(song.id, song));
+    catalogResults.songs.forEach(song => {
+      if (!songs.has(song.id)) songs.set(song.id, song);
+    });
+    return {
+      songs: Array.from(songs.values()),
+      artists: catalogResults.artists,
+      albums: catalogResults.albums,
+      playlists: catalogResults.playlists,
+    };
   }
 
   public async getTrack(trackId: string): Promise<Song | null> {

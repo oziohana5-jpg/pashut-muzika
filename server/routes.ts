@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { db, hashPassword, verifyPassword } from './db';
-import { musicService, resolveYouTubeForTrack } from './musicProvider';
+import { defaultMusicProvider, musicService, resolveYouTubeForTrack } from './musicProvider';
 import {
   AuthenticatedRequest,
   generateToken,
@@ -579,8 +579,14 @@ apiRouter.get('/music/search', async (req, res) => {
   const q = String(req.query.q || '');
   const filter = String(req.query.filter || 'all');
   const provider = musicService.getActiveProvider();
-  const results = await provider.search(q, filter);
-  res.json(results);
+  try {
+    const results = await provider.search(q, filter);
+    res.json(results);
+  } catch (error) {
+    console.error('Music search provider failed:', error);
+    const fallback = await defaultMusicProvider.search(q, filter);
+    res.json(fallback);
+  }
 });
 
 // ==========================================
