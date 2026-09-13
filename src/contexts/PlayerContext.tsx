@@ -706,12 +706,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       audioRef.current.src = targetSong.streamUrl;
       audioRef.current.load();
       audioRef.current.play().catch(console.warn);
-    } else if (targetSong.youtubeId) {
+    } else if (targetSong.youtubeId && !isPlaceholderStream) {
       startYtPlayback(targetSong.youtubeId);
     } else {
       activeEngineRef.current = 'youtube';
       // Simultaneously resolve real YouTube track for full-length playback
-      fetch(`/api/music/resolve-youtube?title=${encodeURIComponent(targetSong.title)}&artist=${encodeURIComponent(targetSong.artistName)}&songId=${targetSong.id}`)
+      fetch(`/api/music/resolve-youtube?title=${encodeURIComponent(targetSong.title)}&artist=${encodeURIComponent(targetSong.artistName)}`)
         .then(res => res.json())
         .then(data => {
           if (data.youtubeId && playbackRef.current.currentSong?.id === targetSong.id) {

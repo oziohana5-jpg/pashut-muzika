@@ -996,7 +996,7 @@
     }
 
     // Play Track
-    function playTrack(track) {
+    async function playTrack(track) {
       initWebAudio();
       if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume();
@@ -1005,6 +1005,27 @@
       const idx = currentList.findIndex(t => t.id === track.id);
       currentIndex = idx >= 0 ? idx : 0;
       const current = currentList[currentIndex];
+
+      if (current.ytId || /soundhelix\.com|example\.com/i.test(current.audioUrl || '')) {
+        let ytId = current.ytId;
+        try {
+          const response = await fetch(`/api/music/resolve-youtube?title=${encodeURIComponent(current.title)}&artist=${encodeURIComponent(current.artist)}`);
+          const data = await response.json();
+          ytId = data.youtubeId || ytId;
+        } catch (e) {
+          console.warn('Could not resolve the selected track:', e);
+        }
+        if (ytId) {
+          document.getElementById('yt-player-slot').innerHTML = `
+            <iframe width="100%" height="100%" src="https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+          `;
+          document.getElementById('video-overlay').style.display = 'block';
+          audio.pause();
+          isPlaying = true;
+          updateUI();
+          return;
+        }
+      }
 
       audio.src = current.audioUrl;
       audio.playbackRate = playbackRates[rateIdx];
