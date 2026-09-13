@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { db, hashPassword, verifyPassword } from './db';
-import { defaultMusicProvider, musicService, resolveYouTubeForTrack } from './musicProvider';
+import { defaultMusicProvider, musicService, resolveYouTubeForTrack, searchYouTubeTracks } from './musicProvider';
 import {
   AuthenticatedRequest,
   generateToken,
@@ -589,13 +589,17 @@ apiRouter.get('/music/search', async (req, res) => {
     const results = await provider.search(q, filter);
     const hasResults = results.songs.length > 0 || results.artists.length > 0 || results.albums.length > 0 || results.playlists.length > 0;
     if (!hasResults && provider.id !== 'licensed_catalog') {
-      res.json(await defaultMusicProvider.search(q, filter));
+      const fallback = await defaultMusicProvider.search(q, filter);
+      const youtubeSongs = filter === 'all' || filter === 'songs' ? await searchYouTubeTracks(q) : [];
+      res.json({ ...fallback, songs: [...fallback.songs, ...youtubeSongs] });
       return;
     }
     res.json(results);
   } catch (error) {
     console.error('Music search provider failed:', error);
-    res.json(await defaultMusicProvider.search(q, filter));
+    const fallback = await defaultMusicProvider.search(q, filter);
+    const youtubeSongs = filter === 'all' || filter === 'songs' ? await searchYouTubeTracks(q) : [];
+    res.json({ ...fallback, songs: [...fallback.songs, ...youtubeSongs] });
   }
 });
 
