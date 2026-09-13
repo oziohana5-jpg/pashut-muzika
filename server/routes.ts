@@ -547,7 +547,10 @@ apiRouter.get('/music/home', async (req: AuthenticatedRequest, res) => {
   const userId = req.user?.id;
   const activeProvider = musicService.getActiveProvider();
   const providerSongs = activeProvider.id === 'jamendo_legal'
-    ? (await activeProvider.search('')).songs
+    ? await Promise.race([
+        activeProvider.search('').then(result => result.songs),
+        new Promise<Song[]>(resolve => setTimeout(() => resolve([]), 1500)),
+      ])
     : [];
   const allSongs = activeProvider.id === 'jamendo_legal' && providerSongs.length > 0
     ? providerSongs
