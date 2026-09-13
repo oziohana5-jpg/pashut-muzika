@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { db, hashPassword, verifyPassword } from './db';
-import { musicService, resolveYouTubeForTrack } from './musicProvider';
+import { defaultMusicProvider, musicService, resolveYouTubeForTrack } from './musicProvider';
 import {
   AuthenticatedRequest,
   generateToken,
@@ -585,8 +585,26 @@ apiRouter.get('/music/search', async (req, res) => {
   const q = String(req.query.q || '');
   const filter = String(req.query.filter || 'all');
   const provider = musicService.getActiveProvider();
-  const results = await provider.search(q, filter);
-  res.json(results);
+  const [providerResults, catalogResults] = await Promise.all([
+    provider.search(q, filter),
+    provider.id === 'licensed_catalog' ? Promise.resolve(null) : defaultMusicProvider.search(q, filter),
+  ]);
+
+  if (!catalogResults) {
+    res.json(providerResults);
+    return;
+  }
+
+  const songs = new Map<string, Song>();
+  providerResults.songs.forEach(song => songs.set(song.id, song));
+  catalogResults.songs.forEach(song => songs.set(song.id, song));
+
+  res.json({
+    songs: Array.from(songs.values()),
+    artists: catalogResults.artists.length > 0 ? catalogResults.artists : providerResults.artists,
+    albums: catalogResults.albums.length > 0 ? catalogResults.albums : providerResults.albums,
+    playlists: catalogResults.playlists.length > 0 ? catalogResults.playlists : providerResults.playlists,
+  });
 });
 
 // ==========================================
