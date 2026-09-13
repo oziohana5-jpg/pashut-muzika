@@ -30,7 +30,15 @@ import { DownloadsView } from './components/DownloadsView';
 
 const MainApp: React.FC = () => {
   const { direction } = useLanguage();
-  const { user, token } = useAuth();
+  const {
+    user,
+    token,
+    isAuthModalOpen,
+    authModalMode,
+    authPromptMessage,
+    openAuthModal,
+    closeAuthModal,
+  } = useAuth();
 
   // Navigation state & history stack
   const [activeView, setActiveView] = useState<ActiveView>({ type: 'tab', tab: 'home' });
@@ -49,7 +57,6 @@ const MainApp: React.FC = () => {
   }, []);
 
   // Modals
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
   const [isApkModalOpen, setIsApkModalOpen] = useState(false);
   const [apkModalInitialTab, setApkModalInitialTab] = useState<'windows' | 'website' | 'android' | 'ios'>('windows');
@@ -69,7 +76,7 @@ const MainApp: React.FC = () => {
     }
 
     try {
-      const res = await fetch('/api/user/playlists', {
+      const res = await fetch('/api/user/library', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -121,7 +128,7 @@ const MainApp: React.FC = () => {
 
   const handleCreatePlaylistClick = () => {
     if (!user) {
-      setIsAuthModalOpen(true);
+      openAuthModal('כדי ליצור פלייליסט ולשמור אותו בספרייה האישית, יש להתחבר לחשבון.', 'login');
     } else {
       setIsCreatePlaylistOpen(true);
     }
@@ -149,7 +156,7 @@ const MainApp: React.FC = () => {
         <Header
           activeView={activeView}
           onNavigateTab={handleNavigateTab}
-          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenAuthModal={() => openAuthModal()}
           onOpenApkModal={handleOpenApkModal}
           canGoBack={viewHistory.length > 0}
           onGoBack={handleGoBack}
@@ -250,7 +257,9 @@ const MainApp: React.FC = () => {
       {/* Auth Modal (Login / Register / Reset) */}
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={closeAuthModal}
+        initialMode={authModalMode === 'forgot' ? 'login' : authModalMode}
+        promptMessage={authPromptMessage}
       />
 
       {/* Playlist Creation Modal */}

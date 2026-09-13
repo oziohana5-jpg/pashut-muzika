@@ -42,8 +42,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     setLoading(true);
 
     Promise.all([
-      fetch('/api/user/playlists', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-      fetch('/api/user/following', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
+      fetch('/api/user/library', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
+      fetch('/api/user/followed', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
       fetch('/api/user/history', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
       fetch('/api/music/home').then((r) => r.json()),
     ])
