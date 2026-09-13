@@ -242,10 +242,11 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlistId, onDelete
 
             <button
               onClick={handleDelete}
-              className="p-3 rounded-full bg-white/5 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 transition"
+              className="flex items-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-300 transition hover:bg-rose-500/20 hover:text-rose-200"
               title={t('deletePlaylist')}
             >
               <Trash2 className="w-4 h-4" />
+              <span>{t('deletePlaylist')}</span>
             </button>
           </>
         )}
