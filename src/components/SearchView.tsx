@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search as SearchIcon, X, Play, Pause, Music, Users, Disc3, Radio, Heart, Plus, Check, CheckCircle } from 'lucide-react';
 import { SearchResults, Song } from '../types';
 import { usePlayer } from '../contexts/PlayerContext';
@@ -31,7 +31,6 @@ export const SearchView: React.FC<SearchViewProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [queuedSongId, setQueuedSongId] = useState<string | null>(null);
-  const searchRequestRef = useRef<AbortController | null>(null);
 
   // Debounced search query
   useEffect(() => {
@@ -51,23 +50,15 @@ export const SearchView: React.FC<SearchViewProps> = ({
   }, [query, filter]);
 
   const searchMusic = async (q: string, currentFilter: string) => {
-    searchRequestRef.current?.abort();
-    const controller = new AbortController();
-    searchRequestRef.current = controller;
     setLoading(true);
     try {
-      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
-      const res = await fetch(
-        `/api/music/search?q=${encodeURIComponent(q)}&filter=${currentFilter}`,
-        { signal: controller.signal }
-      );
-      window.clearTimeout(timeoutId);
+      const res = await fetch(`/api/music/search?q=${encodeURIComponent(q)}&filter=${currentFilter}`);
       const data = await res.json();
-      if (!controller.signal.aborted) setResults(data);
+      setResults(data);
     } catch (err) {
-      if (!controller.signal.aborted) console.error('Search error:', err);
+      console.error('Search error:', err);
     } finally {
-      if (!controller.signal.aborted) setLoading(false);
+      setLoading(false);
     }
   };
 

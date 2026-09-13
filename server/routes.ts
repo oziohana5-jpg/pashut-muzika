@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { db, hashPassword, verifyPassword } from './db';
-import { defaultMusicProvider, musicService, resolveYouTubeForTrack } from './musicProvider';
+import { musicService, resolveYouTubeForTrack } from './musicProvider';
 import {
   AuthenticatedRequest,
   generateToken,
@@ -13,6 +13,7 @@ import {
   requireAdmin,
 } from './auth';
 import { Song, User } from './types';
+import { getSongLyrics } from '../src/data/lyricsData';
 
 export const apiRouter = Router();
 
@@ -20,11 +21,6 @@ export const apiRouter = Router();
 function sanitizeUser(user: User) {
   const { passwordHash, ...rest } = user;
   return rest;
-}
-
-function isPlayableSong(song: Song): boolean {
-  const hasPlaceholderStream = /soundhelix\.com|example\.com/i.test(song.streamUrl || '');
-  return song.isFullLength && !song.id.startsWith('itunes-') && Boolean(song.youtubeId || (song.streamUrl && !hasPlaceholderStream));
 }
 
 // ==========================================
@@ -367,7 +363,7 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
   try {
     const { songId } = req.params;
     const currentSong = db.getSongById(songId);
-    const allSongs = db.getSongs().filter(isPlayableSong);
+    const allSongs = db.getSongs();
 
     let targetArtistName = currentSong?.artistName || '';
     let targetGenre = currentSong?.genre || '';
@@ -540,13 +536,7 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
 // ==========================================
 apiRouter.get('/music/home', async (req: AuthenticatedRequest, res) => {
   const userId = req.user?.id;
-  const activeProvider = musicService.getActiveProvider();
-  const providerSongs = activeProvider.id === 'jamendo_legal'
-    ? (await activeProvider.search('')).songs
-    : [];
-  const allSongs = activeProvider.id === 'jamendo_legal'
-    ? providerSongs
-    : db.getSongs().filter(isPlayableSong);
+  const allSongs = db.getSongs();
   const allArtists = db.getArtists();
   const allAlbums = db.getAlbums();
   const allPlaylists = db.getPlaylists().filter(p => p.isPublic);
@@ -557,7 +547,7 @@ apiRouter.get('/music/home', async (req: AuthenticatedRequest, res) => {
     const recent = db.getRecentlyPlayed(userId);
     recentlyPlayedSongs = recent
       .map(r => db.getSongById(r.songId))
-      .filter((s): s is Song => Boolean(s) && isPlayableSong(s))
+      .filter((s): s is Song => Boolean(s))
       .slice(0, 8);
   }
   if (recentlyPlayedSongs.length === 0) {
@@ -589,14 +579,8 @@ apiRouter.get('/music/search', async (req, res) => {
   const q = String(req.query.q || '');
   const filter = String(req.query.filter || 'all');
   const provider = musicService.getActiveProvider();
-  try {
-    const results = await provider.search(q, filter);
-    res.json(results);
-  } catch (error) {
-    console.error('Music search provider failed:', error);
-    const fallback = await defaultMusicProvider.search(q, filter);
-    res.json(fallback);
-  }
+  const results = await provider.search(q, filter);
+  res.json(results);
 });
 
 // ==========================================
@@ -626,7 +610,7 @@ apiRouter.get('/music/album/:id', async (req, res) => {
 // 6. RECOMMENDATIONS ENGINE
 // ==========================================
 apiRouter.get('/music/recommendations', async (req: AuthenticatedRequest, res) => {
-  const allSongs = db.getSongs().filter(isPlayableSong);
+  const allSongs = db.getSongs();
   const allArtists = db.getArtists();
   const allAlbums = db.getAlbums();
   const allPlaylists = db.getPlaylists().filter(p => p.isPublic);
@@ -1031,18 +1015,15 @@ apiRouter.get('/lyrics', async (req, res) => {
   }
 
   try {
-    const fetchWithTimeout = async (url: string): Promise<globalThis.Response> => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      try {
-        return await fetch(url, {
-          signal: controller.signal,
-          headers: { 'User-Agent': 'SimplyMusicApp/1.0' },
-        });
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    };
+    // Keep the local lyrics as a fallback only. The same song can have different
+    // intros and timing, so a synchronized recording must be preferred first.
+    const verified = getSongLyrics({
+      id: '',
+      title: songTitle,
+      titleHe: songTitle,
+      artistName: songArtist,
+      duration: songDuration,
+    });
 
     // Clean track title: remove parenthesis, "- Single", "official video", "קליפ רשמי", etc.
     const cleanTitle = songTitle
@@ -1091,8 +1072,9 @@ apiRouter.get('/lyrics', async (req, res) => {
 
     // Prefer LRCLIB's exact lookup so a cover, remix, or different recording is not selected.
     try {
-      const exactResp = await fetchWithTimeout(
-        `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(songArtist)}&duration=${encodeURIComponent(String(songDuration))}`
+      const exactResp = await fetch(
+        `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(songArtist)}&duration=${encodeURIComponent(String(songDuration))}`,
+        { headers: { 'User-Agent': 'SimplyMusicApp/1.0' } }
       );
       if (exactResp.ok) {
         const exact = await exactResp.json();
@@ -1106,7 +1088,9 @@ apiRouter.get('/lyrics', async (req, res) => {
       if (foundLrc) break;
       if (!q.trim()) continue;
       try {
-        const resp = await fetchWithTimeout(`https://lrclib.net/api/search?q=${encodeURIComponent(q.trim())}`);
+        const resp = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(q.trim())}`, {
+          headers: { 'User-Agent': 'SimplyMusicApp/1.0' },
+        });
         if (resp.ok) {
           const data: any = await resp.json();
           if (Array.isArray(data) && data.length > 0) {
@@ -1150,6 +1134,16 @@ apiRouter.get('/lyrics', async (req, res) => {
           return;
         }
       }
+    }
+
+    if (verified && verified.length > 0) {
+      res.json({
+        source: 'verified-fallback',
+        trackName: songTitle,
+        artistName: songArtist,
+        lyrics: verified,
+      });
+      return;
     }
 
     res.json({ source: 'none', lyrics: [] });

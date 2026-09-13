@@ -67,7 +67,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const isYtReadyRef = useRef<boolean>(false);
   const activeEngineRef = useRef<'youtube' | 'audio'>('youtube');
   const pendingVideoIdRef = useRef<string | null>(null);
-  const ytStartTimeoutRef = useRef<number | null>(null);
 
   const [playback, setPlayback] = useState<PlaybackState>(() => {
     let savedVol = 0.85;
@@ -364,17 +363,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
                 if (pendingVideoIdRef.current) {
                   event.target.loadVideoById(pendingVideoIdRef.current);
-                  event.target.playVideo();
                   pendingVideoIdRef.current = null;
                 }
               },
               onStateChange: (event: any) => {
                 // YT.PlayerState: 1 = PLAYING, 2 = PAUSED, 3 = BUFFERING, 0 = ENDED
                 if (event.data === 1) {
-                  if (ytStartTimeoutRef.current !== null) {
-                    window.clearTimeout(ytStartTimeoutRef.current);
-                    ytStartTimeoutRef.current = null;
-                  }
                   setPlayback(prev => ({ ...prev, isPlaying: true, isBuffering: false, error: null }));
                 } else if (event.data === 2) {
                   setPlayback(prev => ({ ...prev, isPlaying: false }));
@@ -386,16 +380,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               },
               onError: (err: any) => {
                 console.warn('YouTube Player playback warning:', err);
-                if (ytStartTimeoutRef.current !== null) {
-                  window.clearTimeout(ytStartTimeoutRef.current);
-                  ytStartTimeoutRef.current = null;
+                const cur = playbackRef.current.currentSong;
+                if (cur && audioRef.current) {
+                  activeEngineRef.current = 'audio';
+                  audioRef.current.src = `/api/stream/${cur.id}`;
+                  audioRef.current.play().catch(console.warn);
                 }
-                setPlayback(prev => ({
-                  ...prev,
-                  isPlaying: false,
-                  isBuffering: false,
-                  error: t('songUnavailable'),
-                }));
               },
             },
           });
@@ -429,7 +419,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               ...prev,
               currentTime: time,
               duration: safeDur,
-              isBuffering: time > 0 ? false : prev.isBuffering,
             };
           });
         } catch {}
@@ -661,35 +650,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         history: updatedHistory,
         queue: cleanQueue,
         isFullPlayerOpen: true,
-        isVideoMode: false,
       };
     });
 
     const startYtPlayback = (ytId: string) => {
       activeEngineRef.current = 'youtube';
-      if (ytStartTimeoutRef.current !== null) {
-        window.clearTimeout(ytStartTimeoutRef.current);
-      }
-      ytStartTimeoutRef.current = window.setTimeout(() => {
-        ytStartTimeoutRef.current = null;
-        if (playbackRef.current.currentSong?.id === targetSong.id && playbackRef.current.isBuffering) {
-          setPlayback(prev => ({
-            ...prev,
-            isPlaying: false,
-            isBuffering: false,
-            error: t('songUnavailable'),
-          }));
-        }
-      }, 10000);
       if (audioRef.current) {
         audioRef.current.pause();
-      }
-      const host = document.getElementById('youtube-player-host');
-      const iframe = host?.querySelector('iframe') as HTMLIFrameElement | null;
-      if (iframe) {
-        iframe.src = `https://www.youtube.com/embed/${encodeURIComponent(ytId)}?autoplay=1&controls=1&playsinline=1&rel=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin)}`;
-        setPlayback(prev => ({ ...prev, isPlaying: true, isBuffering: false, error: null }));
-        return;
       }
       if (isYtReadyRef.current && ytPlayerRef.current?.loadVideoById) {
         ytPlayerRef.current.loadVideoById(ytId);
@@ -728,9 +695,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       .catch(() => {});
 
     const isPlaceholderStream = /soundhelix\.com|example\.com/i.test(targetSong.streamUrl || '');
-    const isPreviewOnlyStream = targetSong.id.startsWith('itunes-') || !targetSong.isFullLength;
+    const isPreviewOnlyStream = targetSong.id.startsWith('itunes-');
     const hasDirectAudio = Boolean(
       targetSong.streamUrl &&
+      !targetSong.youtubeId &&
       !isPreviewOnlyStream &&
       targetSong.provider !== 'youtube' &&
       !isPlaceholderStream
@@ -745,36 +713,31 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       startYtPlayback(targetSong.youtubeId);
     } else {
       activeEngineRef.current = 'youtube';
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
-      fetch(`/api/music/resolve-youtube?title=${encodeURIComponent(targetSong.title)}&artist=${encodeURIComponent(targetSong.artistName)}`, {
-        signal: controller.signal,
-      })
+      // Simultaneously resolve real YouTube track for full-length playback
+      fetch(`/api/music/resolve-youtube?title=${encodeURIComponent(targetSong.title)}&artist=${encodeURIComponent(targetSong.artistName)}`)
         .then(res => res.json())
         .then(data => {
-          window.clearTimeout(timeoutId);
           if (data.youtubeId && playbackRef.current.currentSong?.id === targetSong.id) {
-            const updated = { ...targetSong, youtubeId: data.youtubeId, duration: data.duration || targetSong.duration };
+            const updated = {
+              ...targetSong,
+              youtubeId: data.youtubeId,
+              duration: data.duration || targetSong.duration,
+            };
             setPlayback(prev => ({
               ...prev,
               currentSong: updated,
               duration: data.duration || prev.duration,
-              isPlaying: true,
-              isBuffering: false,
             }));
             startYtPlayback(data.youtubeId);
-          } else {
-            setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
           }
         })
         .catch(() => {
-          window.clearTimeout(timeoutId);
-          setPlayback(prev => ({
-            ...prev,
-            isPlaying: false,
-            isBuffering: false,
-            error: isPreviewOnlyStream ? 'לשיר הזה אין מקור שמע מלא וזמין להפעלה.' : t('songUnavailable'),
-          }));
+          // If YouTube resolution fails, only play real audio stream if explicitly provided (never random trance)
+          if (targetSong.streamUrl && !isPreviewOnlyStream && !isPlaceholderStream && audioRef.current) {
+            activeEngineRef.current = 'audio';
+            audioRef.current.src = targetSong.streamUrl;
+            audioRef.current.play().catch(console.warn);
+          }
         });
     }
 

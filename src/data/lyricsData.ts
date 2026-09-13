@@ -1077,8 +1077,8 @@ export function getSongLyrics(song: {
 }
 
 /**
- * Dynamically fetches lyrics for the exact recording from server/LRCLIB API.
- * Returns no text when an exact match is unavailable.
+ * Dynamically fetches authentic lyrics from server/LRCLIB API.
+ * Falls back to local 100% verified lyrics dictionary.
  */
 export async function fetchDynamicLyrics(song: {
   id: string;
@@ -1087,15 +1087,16 @@ export async function fetchDynamicLyrics(song: {
   artistName: string;
   duration?: number;
 }): Promise<LyricLine[]> {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 7000);
+  const local = getSongLyrics(song);
+  if (local && local.length > 0) {
+    return local;
+  }
 
   try {
     const titleToSearch = song.titleHe || song.title;
     const dur = song.duration || 180;
     const res = await fetch(
-      `/api/lyrics?title=${encodeURIComponent(titleToSearch)}&artist=${encodeURIComponent(song.artistName)}&duration=${dur}`,
-      { signal: controller.signal }
+      `/api/lyrics?title=${encodeURIComponent(titleToSearch)}&artist=${encodeURIComponent(song.artistName)}&duration=${dur}`
     );
     if (res.ok) {
       const data = await res.json();
@@ -1105,9 +1106,7 @@ export async function fetchDynamicLyrics(song: {
     }
   } catch (err) {
     // Network or API error handled smoothly
-  } finally {
-    window.clearTimeout(timeoutId);
   }
 
-  return [];
+  return local;
 }

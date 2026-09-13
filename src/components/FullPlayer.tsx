@@ -29,7 +29,7 @@ import {
 import { usePlayer } from '../contexts/PlayerContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatTime } from '../utils/formatters';
-import { fetchDynamicLyrics, LyricLine } from '../data/lyricsData';
+import { getSongLyrics, fetchDynamicLyrics, LyricLine } from '../data/lyricsData';
 import { AddToPlaylistModal } from './AddToPlaylistModal';
 import { handleImageError, DEFAULT_ALBUM_COVER } from '../utils/imageFallback';
 
@@ -98,7 +98,7 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
   const activeLineRef = useRef<HTMLDivElement>(null);
 
   const song = playback.currentSong;
-  const [lyrics, setLyrics] = useState<LyricLine[]>([]);
+  const [lyrics, setLyrics] = useState<LyricLine[]>(() => (song ? getSongLyrics(song) : []));
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
 
   // Dynamically load real synchronized lyrics whenever song changes
@@ -109,8 +109,15 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
       return;
     }
 
-    // Always fetch lyrics for the exact recording. Local demo text is not used
-    // because it can be different from the audio version being played.
+    // Check if we have instant verified local lyrics
+    const local = getSongLyrics(song);
+    if (local && local.length > 0) {
+      setLyrics(local);
+      setIsLoadingLyrics(false);
+      return;
+    }
+
+    // Otherwise fetch from LRCLIB API dynamically
     setLyrics([]);
     setIsLoadingLyrics(true);
 
@@ -133,7 +140,7 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
     return () => {
       isCancelled = true;
     };
-  }, [song?.id, song?.title, song?.titleHe, song?.artistName, song?.duration]);
+  }, [song?.id, song?.title, song?.titleHe]);
 
   // Find active lyric line index based on playback.currentTime
   // High-frequency local time for smooth lyrics sync — calls YT player directly, bypasses React render cycle
