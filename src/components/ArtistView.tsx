@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Shuffle, CheckCircle, Heart, Plus, Headphones, Disc3, Sparkles } from 'lucide-react';
+import { Play, Shuffle, CheckCircle, Heart, Plus, Headphones, Disc3, Sparkles, Users, ArrowUpLeft } from 'lucide-react';
 import { Artist, Song, Album } from '../types';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -86,36 +86,41 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
 
   return (
     <div className="pb-28 text-right">
-      <section className="relative isolate overflow-hidden border-b border-white/10 bg-[#11151d]">
+      <section className="relative isolate overflow-hidden border-b border-white/10 bg-[#0e1118]">
         <div className="absolute inset-0 -z-20">
-          <img src={artist.bannerUrl || artist.imageUrl} alt="" className="h-full w-full object-cover opacity-40" />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,#0a0b0e_8%,rgba(10,11,14,.74)_48%,rgba(10,11,14,.28)),linear-gradient(0deg,#0a0b0e_0%,transparent_68%)]" />
+          <img src={artist.imageUrl} alt="" className="h-full w-full object-cover opacity-20 blur-2xl" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,#080a0f_8%,rgba(8,10,15,.9)_58%,rgba(8,10,15,.55)),linear-gradient(0deg,#0a0b0e_0%,transparent_70%)]" />
         </div>
-        <div className="mx-auto flex min-h-[390px] max-w-6xl flex-col items-start justify-end gap-5 px-5 pb-8 pt-14 sm:min-h-[420px] sm:flex-row sm:items-end sm:gap-8 sm:px-10 sm:pb-12">
-          <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-full border-4 border-white/20 bg-zinc-900 shadow-2xl shadow-black/50 sm:h-56 sm:w-56">
-            <img src={artist.imageUrl} alt={artist.name} className="h-full w-full object-cover" />
+        <div className="mx-auto grid min-h-[430px] max-w-6xl items-end gap-7 px-5 pb-9 pt-16 sm:grid-cols-[240px_1fr] sm:gap-10 sm:px-10 sm:pb-12">
+          <div className="group relative aspect-[4/5] w-40 overflow-hidden rounded-[26px] border border-white/20 bg-zinc-900 shadow-2xl shadow-black/50 sm:w-60">
+            <img src={artist.imageUrl} alt={artist.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+            <div className="absolute bottom-3 start-3 rounded-full border border-white/15 bg-black/45 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur">Simply Music Artist</div>
           </div>
-          <div className="max-w-2xl space-y-4">
+          <div className="max-w-3xl space-y-5">
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-blue-300">
               {artist.verified && <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 px-3 py-1.5"><CheckCircle className="h-3.5 w-3.5 fill-blue-500 text-white" /> {t('verifiedArtist')}</span>}
-              <span className="rounded-full border border-white/15 bg-black/20 px-3 py-1.5">{artist.genres[0]}</span>
+              {artist.genres.slice(0, 2).map((genre) => <span key={genre} className="rounded-full border border-white/15 bg-black/20 px-3 py-1.5">{genre}</span>)}
             </div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl">{artist.nameHe || artist.name}</h1>
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[.22em] text-zinc-500">Artist profile</p>
+              <h1 className="text-4xl font-black tracking-tight text-white sm:text-7xl">{artist.nameHe || artist.name}</h1>
               {artist.verified && <CheckCircle className="h-7 w-7 shrink-0 fill-blue-500 text-white sm:h-9 sm:w-9" />}
             </div>
-            <p className="max-w-xl text-sm leading-6 text-zinc-300 sm:text-base">{artist.bioHe || artist.bio}</p>
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-zinc-300 sm:text-sm">
-              <span className="inline-flex items-center gap-2"><Headphones className="h-4 w-4 text-blue-400" /> {formatNumber(followerCount)} {language === 'he' ? 'עוקבים אמיתיים' : 'real followers'}</span>
-              <span className="inline-flex items-center gap-2"><Disc3 className="h-4 w-4 text-blue-400" /> {albums.length} {t('albumsAndSingles')}</span>
+            <p className="max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">{artist.bioHe || artist.bio}</p>
+            <div className="grid max-w-xl grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-white/[.05] p-3"><Users className="mb-2 h-4 w-4 text-blue-400" /><strong className="block text-lg text-white">{formatNumber(followerCount)}</strong><span className="text-[11px] text-zinc-500">{language === 'he' ? 'עוקבים אמיתיים' : 'real followers'}</span></div>
+              <div className="rounded-2xl border border-white/10 bg-white/[.05] p-3"><Headphones className="mb-2 h-4 w-4 text-blue-400" /><strong className="block text-lg text-white">{songs.length}</strong><span className="text-[11px] text-zinc-500">{language === 'he' ? 'שירים' : 'tracks'}</span></div>
+              <div className="hidden rounded-2xl border border-white/10 bg-white/[.05] p-3 sm:block"><Disc3 className="mb-2 h-4 w-4 text-blue-400" /><strong className="block text-lg text-white">{albums.length}</strong><span className="text-[11px] text-zinc-500">{language === 'he' ? 'אלבומים' : 'albums'}</span></div>
             </div>
           </div>
         </div>
       </section>
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-5 py-7 sm:px-10">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 border-b border-white/10 px-5 py-6 sm:px-10">
         <button id="btn-play-all-artist" onClick={playAll} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-500 active:scale-95"><Play className="h-4 w-4 fill-current" /> {t('playAll')}</button>
         <button id="btn-shuffle-artist" onClick={shuffleAll} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.06] px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 active:scale-95"><Shuffle className="h-4 w-4" /> {t('shuffle')}</button>
         <button id="btn-follow-artist" onClick={toggleFollow} className={`rounded-full px-5 py-3 text-sm font-semibold transition active:scale-95 ${isFollowing ? 'border border-blue-400/40 bg-blue-500/15 text-blue-300' : 'border border-white/15 bg-transparent text-white hover:bg-white/10'}`}>{isFollowing ? t('unfollow') : t('follow')}</button>
+        <span className="ms-auto hidden items-center gap-1 text-xs text-zinc-500 sm:inline-flex"><ArrowUpLeft className="h-4 w-4" /> {artist.nameHe || artist.name}</span>
       </div>
 
       {/* Popular Tracks Section */}

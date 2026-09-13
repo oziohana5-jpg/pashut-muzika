@@ -32,6 +32,28 @@ export interface MusicProvider {
 
 const FALLBACK_STREAMS: string[] = [];
 const JAMENDO_API = 'https://api.jamendo.com/v3.0';
+const searchCache = new Map<string, { expiresAt: number; result: SearchResult }>();
+const artistImageCache = new Map<string, string | null>();
+const SEARCH_CACHE_TTL = 5 * 60 * 1000;
+
+async function fetchRealArtistImage(artist: Artist): Promise<Artist> {
+  const name = artist.nameHe || artist.name;
+  const hasAlbumArt = artist.imageUrl.includes('mzstatic.com') || artist.imageUrl.includes('itunes');
+  if (!hasAlbumArt && !artist.imageUrl.includes('unsplash')) return artist;
+  if (!artistImageCache.has(name)) {
+    try {
+      const response = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`, {
+        headers: { 'User-Agent': 'SimplyMusic/2.0 (artist profiles)' },
+      });
+      const data = response.ok ? await response.json() as { originalimage?: { source?: string }; thumbnail?: { source?: string } } : {};
+      artistImageCache.set(name, data.originalimage?.source || data.thumbnail?.source || null);
+    } catch {
+      artistImageCache.set(name, null);
+    }
+  }
+  const imageUrl = artistImageCache.get(name);
+  return imageUrl ? { ...artist, imageUrl } : artist;
+}
 
 type JamendoTrack = {
   id: number;
@@ -396,6 +418,10 @@ export class LicensedCatalogProvider implements MusicProvider {
       };
     }
 
+    const cacheKey = `${q}:${filter || 'all'}`;
+    const cached = searchCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return cached.result;
+
     // 1. Match local library
     const matchedSongs = (filter === 'all' || filter === 'songs' || !filter)
       ? allSongs.filter(s =>
@@ -430,8 +456,21 @@ export class LicensedCatalogProvider implements MusicProvider {
         )
       : [];
 
-    // Keep normal search responsive: YouTube HTML search is slow, so use it only
-    // for song searches that have no local or iTunes matches.
+    // Local catalog results are instant. Do not make users wait for remote
+    // providers when the app already has a relevant answer.
+    const localResult: SearchResult = {
+      songs: matchedSongs,
+      artists: matchedArtists,
+      albums: matchedAlbums,
+      playlists: matchedPlaylists,
+    };
+    if (matchedSongs.length || matchedArtists.length || matchedAlbums.length || matchedPlaylists.length) {
+      searchCache.set(cacheKey, { expiresAt: Date.now() + SEARCH_CACHE_TTL, result: localResult });
+      return localResult;
+    }
+
+    // Only empty local searches use remote providers. This keeps normal search
+    // responsive while preserving discovery for songs outside the catalog.
     const onlineResults = await fetchOnlineCatalog(query, filter);
     const shouldSearchYouTube =
       filter === 'songs' &&
@@ -455,12 +494,14 @@ export class LicensedCatalogProvider implements MusicProvider {
     matchedAlbums.forEach(al => albumMap.set(al.id, al));
     onlineResults.albums.forEach(al => albumMap.set(al.id, al));
 
-    return {
+    const result = {
       songs: Array.from(songMap.values()),
       artists: Array.from(artistMap.values()),
       albums: Array.from(albumMap.values()),
       playlists: matchedPlaylists,
     };
+    searchCache.set(cacheKey, { expiresAt: Date.now() + SEARCH_CACHE_TTL, result });
+    return result;
   }
 
   public async getTrack(trackId: string): Promise<Song | null> {
@@ -609,6 +650,8 @@ export class LicensedCatalogProvider implements MusicProvider {
     }
 
     if (!artist) return null;
+    artist = await fetchRealArtistImage(artist);
+    db.upsertArtist(artist);
     const allTracks = db.getSongs().filter(s => s.artistId === artistId);
     const topTracks = [...allTracks].sort((a, b) => b.plays - a.plays).slice(0, 20);
     const albums = db.getAlbums().filter(al => al.artistId === artistId);

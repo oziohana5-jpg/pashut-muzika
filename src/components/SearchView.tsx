@@ -32,6 +32,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [queuedSongId, setQueuedSongId] = useState<string | null>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
+  const searchCacheRef = useRef(new Map<string, SearchResults>());
 
   // Debounced search query
   useEffect(() => {
@@ -57,6 +58,13 @@ export const SearchView: React.FC<SearchViewProps> = ({
     searchAbortRef.current?.abort();
     const controller = new AbortController();
     searchAbortRef.current = controller;
+    const cacheKey = `${q.toLocaleLowerCase()}:${currentFilter}`;
+    const cached = searchCacheRef.current.get(cacheKey);
+    if (cached) {
+      setResults(cached);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`/api/music/search?q=${encodeURIComponent(q)}&filter=${currentFilter}`, {
@@ -64,6 +72,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
       });
       const data = await res.json();
       setResults(data);
+      searchCacheRef.current.set(cacheKey, data);
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError')) {
         console.error('Search error:', err);
