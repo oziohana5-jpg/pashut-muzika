@@ -712,7 +712,11 @@ export class JamendoProvider implements MusicProvider {
     const songs = new Map<string, Song>();
     jamendoSongs.forEach(song => songs.set(song.id, song));
     catalogResults.songs.forEach(song => {
-      if (!songs.has(song.id)) songs.set(song.id, song);
+      // Do not expose YouTube results while background-audio mode is active.
+      // A clicked YouTube result would switch playback back to an iframe.
+      if (!song.youtubeId && song.provider !== 'youtube' && !songs.has(song.id)) {
+        songs.set(song.id, song);
+      }
     });
     return {
       songs: Array.from(songs.values()),
