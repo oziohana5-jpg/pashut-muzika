@@ -536,7 +536,13 @@ apiRouter.get('/music/similar/:songId', async (req, res) => {
 // ==========================================
 apiRouter.get('/music/home', async (req: AuthenticatedRequest, res) => {
   const userId = req.user?.id;
-  const allSongs = db.getSongs();
+  const activeProvider = musicService.getActiveProvider();
+  const providerSongs = activeProvider.id === 'jamendo_legal'
+    ? (await activeProvider.search('')).songs
+    : [];
+  const allSongs = activeProvider.id === 'jamendo_legal'
+    ? providerSongs
+    : db.getSongs();
   const allArtists = db.getArtists();
   const allAlbums = db.getAlbums();
   const allPlaylists = db.getPlaylists().filter(p => p.isPublic);

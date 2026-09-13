@@ -21,3 +21,7 @@ services:
         sync: false
       - key: MONGODB_DB
         value: forteenite
+      - key: MUSIC_PROVIDER
+        value: jamendo
+      - key: JAMENDO_CLIENT_ID
+        sync: false

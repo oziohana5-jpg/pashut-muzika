@@ -31,6 +31,76 @@ export interface MusicProvider {
 }
 
 const FALLBACK_STREAMS: string[] = [];
+const JAMENDO_API = 'https://api.jamendo.com/v3.0';
+
+type JamendoTrack = {
+  id: number;
+  name: string;
+  duration: number;
+  artist_id: number;
+  artist_name: string;
+  album_id?: number;
+  album_name?: string;
+  album_image?: string;
+  image?: string;
+  releasedate?: string;
+  audio?: string;
+  license_ccurl?: string;
+  musicinfo?: { tags?: { genres?: string[] } };
+};
+
+const jamendoClientId = (): string => process.env.JAMENDO_CLIENT_ID?.trim() || '';
+
+function mapJamendoTrack(track: JamendoTrack): Song | null {
+  if (!track.id || !track.name || !track.audio) return null;
+
+  const song: Song = {
+    id: `jamendo-${track.id}`,
+    title: track.name,
+    titleHe: track.name,
+    artistId: `jamendo-art-${track.artist_id}`,
+    artistName: track.artist_name || 'Jamendo Artist',
+    albumId: `jamendo-alb-${track.album_id || track.id}`,
+    albumName: track.album_name || 'Single',
+    coverUrl: track.album_image || track.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+    duration: track.duration || 0,
+    releaseDate: track.releasedate || '2024-01-01',
+    genre: track.musicinfo?.tags?.genres?.[0] || 'Music',
+    streamUrl: track.audio,
+    provider: 'jamendo_legal',
+    audioFormat: 'mp3',
+    bitrate: 192,
+    plays: 0,
+    isFullLength: true,
+    licenseInfo: track.license_ccurl || 'Jamendo track license',
+  };
+  db.upsertSong(song);
+  return song;
+}
+
+async function fetchJamendoTracks(params: Record<string, string>): Promise<Song[]> {
+  const clientId = jamendoClientId();
+  if (!clientId) return [];
+
+  const query = new URLSearchParams({
+    client_id: clientId,
+    format: 'json',
+    limit: '30',
+    audioformat: 'mp32',
+    type: 'single albumtrack',
+    ...params,
+  });
+
+  try {
+    const response = await fetch(`${JAMENDO_API}/tracks/?${query.toString()}`);
+    if (!response.ok) return [];
+    const data = await response.json() as { results?: JamendoTrack[] };
+    return (data.results || []).map(mapJamendoTrack).filter((song): song is Song => Boolean(song));
+  } catch (error) {
+    console.warn('Jamendo request failed:', error);
+    return [];
+  }
+}
 
 /**
  * Performs a zero-token, public catalog search across global and Israeli music.
@@ -621,32 +691,45 @@ export class JamendoProvider implements MusicProvider {
 
   public isEnabled(): boolean {
     const prov = db.getProviders().find(p => p.id === this.id);
-    return prov ? prov.enabled : false;
+    return Boolean(jamendoClientId()) && (prov ? prov.enabled : true);
   }
 
   public async search(query: string, filter?: string): Promise<SearchResult> {
-    // Fall back to licensed catalog if external API key is unconfigured
-    return defaultMusicProvider.search(query, filter);
+    const songs = await fetchJamendoTracks({ search: query.trim() });
+    return { songs, artists: [], albums: [], playlists: [] };
   }
 
   public async getTrack(trackId: string): Promise<Song | null> {
-    return defaultMusicProvider.getTrack(trackId);
+    if (!trackId.startsWith('jamendo-')) return null;
+    const songs = await fetchJamendoTracks({ id: trackId.replace('jamendo-', '') });
+    return songs[0] || null;
   }
 
   public async getAlbum(albumId: string): Promise<{ album: Album; tracks: Song[] } | null> {
-    return defaultMusicProvider.getAlbum(albumId);
+    return null;
   }
 
   public async getArtist(artistId: string): Promise<{ artist: Artist; topTracks: Song[]; albums: Album[]; singles: Song[] } | null> {
-    return defaultMusicProvider.getArtist(artistId);
+    return null;
   }
 
   public async getPlaylist(playlistId: string): Promise<{ playlist: Playlist; tracks: Song[] } | null> {
-    return defaultMusicProvider.getPlaylist(playlistId);
+    return null;
   }
 
   public async getStream(trackId: string): Promise<StreamInfo | null> {
-    return defaultMusicProvider.getStream(trackId);
+    if (!trackId.startsWith('jamendo-')) return null;
+    const song = db.getSongById(trackId) || await this.getTrack(trackId);
+    if (!song?.streamUrl) return null;
+    return {
+      streamUrl: song.streamUrl,
+      format: song.audioFormat,
+      bitrate: song.bitrate,
+      isFullLength: true,
+      authorized: true,
+      license: song.licenseInfo,
+      sourceProvider: this.id,
+    };
   }
 }
 
@@ -663,6 +746,10 @@ export class MusicService {
   }
 
   public getActiveProvider(): MusicProvider {
+    if (process.env.MUSIC_PROVIDER === 'jamendo' && this.providers.get('jamendo_legal')?.isEnabled()) {
+      return this.providers.get('jamendo_legal')!;
+    }
+
     // Check highest priority enabled provider
     const provConfigs = db.getProviders().sort((a, b) => a.priority - b.priority);
     for (const conf of provConfigs) {
