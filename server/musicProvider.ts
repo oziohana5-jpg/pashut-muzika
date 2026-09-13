@@ -241,21 +241,50 @@ export async function resolveYouTubeForTrack(title: string, artistName: string):
     const data = JSON.parse(match[1]);
     const contents = data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents || [];
 
+    const normalize = (value: string): string[] => value
+      .normalize('NFKC')
+      .toLocaleLowerCase()
+      .replace(/[\u0591-\u05C7]/g, '')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 1);
+    const requestedWords = new Set([...normalize(title), ...normalize(artistName)]);
+    let best: { youtubeId: string; durationSec: number; thumbnail?: string; score: number } | null = null;
+
     for (const c of contents) {
       const v = c.videoRenderer;
       if (v && v.videoId && v.title?.runs?.[0]?.text) {
+        const videoTitle = v.title.runs[0].text;
+        const channelName = v.ownerText?.runs?.[0]?.text || '';
         const durationText = v.lengthText?.simpleText || '3:30';
         const parts = durationText.split(':').map(Number);
         const durationSec = parts.length === 2 ? parts[0] * 60 + parts[1] : (parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : 210);
+        if (durationSec > 900) continue;
+        if (/\b(remix|live|acoustic|instrumental|karaoke|cover|reaction|shorts?)\b/i.test(videoTitle)) continue;
+
+        const candidateWords = new Set([...normalize(videoTitle), ...normalize(channelName)]);
+        let score = 0;
+        requestedWords.forEach(word => {
+          if (candidateWords.has(word)) score += 1;
+        });
+        const normalizedTitle = normalize(title).join(' ');
+        const normalizedVideoTitle = normalize(videoTitle).join(' ');
+        if (normalizedTitle && normalizedVideoTitle.includes(normalizedTitle)) score += 3;
+        if (normalize(artistName).some(word => candidateWords.has(word))) score += 2;
+        if (score === 0) continue;
+
         const thumb = v.thumbnail?.thumbnails?.[v.thumbnail.thumbnails.length - 1]?.url;
-        return {
+        const candidate = {
           youtubeId: v.videoId,
           durationSec,
           thumbnail: thumb,
+          score,
         };
+        if (!best || candidate.score > best.score) best = candidate;
       }
     }
-    return null;
+    if (!best) return null;
+    return { youtubeId: best.youtubeId, durationSec: best.durationSec, thumbnail: best.thumbnail };
   } catch (err) {
     console.warn('resolveYouTubeForTrack error:', err);
     return null;
