@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { Collection, MongoClient } from 'mongodb';
 import {
   User,
   Artist,
@@ -946,9 +947,39 @@ const initialUsers: User[] = [
 // Initial database
 class Database {
   private data: DatabaseSchema;
+  private mongoClient: MongoClient | null = null;
+  private mongoState: Collection<{ _id: string; data: DatabaseSchema }> | null = null;
+  public readonly ready: Promise<void>;
 
   constructor() {
     this.data = this.load();
+    this.ready = this.initializeMongo();
+  }
+
+  private async initializeMongo(): Promise<void> {
+    const uri = process.env.MONGODB_URI;
+    if (!uri) return;
+
+    try {
+      this.mongoClient = new MongoClient(uri, { serverSelectionTimeoutMS: 8000 });
+      await this.mongoClient.connect();
+      const databaseName = process.env.MONGODB_DB || this.mongoClient.db().databaseName || 'simply_music';
+      this.mongoState = this.mongoClient
+        .db(databaseName)
+        .collection<{ _id: string; data: DatabaseSchema }>('application_state');
+
+      const stored = await this.mongoState.findOne({ _id: 'main' });
+      if (stored?.data) {
+        this.data = stored.data;
+      } else {
+        await this.mongoState.insertOne({ _id: 'main', data: this.data });
+      }
+      console.log(`MongoDB persistence enabled (${databaseName})`);
+    } catch (error) {
+      this.mongoState = null;
+      this.mongoClient = null;
+      console.error('MongoDB unavailable; using local database fallback:', error);
+    }
   }
 
   private load(): DatabaseSchema {
@@ -1011,6 +1042,16 @@ class Database {
       fs.writeFileSync(DB_FILE, JSON.stringify(this.data, null, 2), 'utf-8');
     } catch (err) {
       console.error('Failed to save DB to disk:', err);
+    }
+
+    if (this.mongoState) {
+      void this.mongoState.updateOne(
+        { _id: 'main' },
+        { $set: { data: this.data } },
+        { upsert: true },
+      ).catch(error => {
+        console.error('Failed to save DB to MongoDB:', error);
+      });
     }
   }
 

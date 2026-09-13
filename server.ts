@@ -4,8 +4,10 @@ import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { authMiddleware } from './server/auth';
 import { apiRouter } from './server/routes';
+import { db } from './server/db';
 
 async function startServer() {
+  await db.ready;
   const app = express();
   const PORT = 3000;
 
