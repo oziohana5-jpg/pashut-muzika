@@ -28,6 +28,7 @@ import { LikedSongsView } from './components/LikedSongsView';
 import { AdminDashboard } from './components/AdminDashboard';
 import { UpdatesView } from './components/UpdatesView';
 import { DownloadsView } from './components/DownloadsView';
+import { NotificationPermissionPrompt } from './components/NotificationPermissionPrompt';
 
 const MainApp: React.FC = () => {
   const { direction } = useLanguage();
@@ -287,6 +288,7 @@ const MainApp: React.FC = () => {
 
       {/* Persistent PWA & APK Installation Banner */}
       <PWAInstallBanner />
+      <NotificationPermissionPrompt />
     </div>
   );
 };

@@ -54,6 +54,9 @@ export const SettingsView: React.FC = () => {
   const [newSongNotifs, setNewSongNotifs] = useState(() => {
     return localStorage.getItem('simply_music_disable_release_notifs') !== 'true';
   });
+  const [browserNotificationPermission, setBrowserNotificationPermission] = useState<NotificationPermission | 'unsupported'>(() =>
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
+  );
 
   // PWA install guide modal
   const [showPwaGuide, setShowPwaGuide] = useState(false);
@@ -78,6 +81,15 @@ export const SettingsView: React.FC = () => {
       localStorage.setItem('simply_music_disable_release_notifs', 'true');
     } else {
       localStorage.removeItem('simply_music_disable_release_notifs');
+    }
+  };
+
+  const handleEnableBrowserNotifications = async () => {
+    if (!('Notification' in window)) return;
+    const permission = await Notification.requestPermission();
+    setBrowserNotificationPermission(permission);
+    if (permission === 'granted') {
+      localStorage.setItem('simply_music_browser_notifications', 'true');
     }
   };
 
@@ -455,6 +467,19 @@ export const SettingsView: React.FC = () => {
               }`}
             />
           </button>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3.5">
+          <div>
+            <p className="text-sm font-semibold text-white">קבל עדכונים (אנחנו לא חופרים)</p>
+            <p className="mt-0.5 text-xs text-zinc-400">התראה על שירים חדשים ועדכונים חשובים בלבד.</p>
+          </div>
+          {browserNotificationPermission === 'granted' ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400"><Check className="h-4 w-4" /> ההתראות פעילות</span>
+          ) : browserNotificationPermission === 'denied' ? (
+            <span className="text-xs text-zinc-500">ההתראות חסומות בהגדרות הדפדפן</span>
+          ) : (
+            <button onClick={handleEnableBrowserNotifications} className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-500">הפעל התראות</button>
+          )}
         </div>
       </section>
 
