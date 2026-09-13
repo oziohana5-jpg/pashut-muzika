@@ -736,7 +736,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const fallbackToYouTube = () => {
       if (targetSong.youtubeId) {
-        setPlayback(prev => ({ ...prev, isVideoMode: true }));
         startYtPlayback(targetSong.youtubeId);
         return;
       }
@@ -756,7 +755,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       audioRef.current.load();
       audioRef.current.play().catch(console.warn);
     } else if (targetSong.youtubeId) {
-      setPlayback(prev => ({ ...prev, isVideoMode: true }));
       startYtPlayback(targetSong.youtubeId);
     } else {
       // Existing catalog songs may not have a direct URL. Resolve them through
