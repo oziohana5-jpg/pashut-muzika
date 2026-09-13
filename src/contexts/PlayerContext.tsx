@@ -654,19 +654,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       };
     });
 
-    // Never leave the player in an endless buffering state when an external
-    // provider or mobile network stops responding.
-    const bufferingWatchdog = window.setTimeout(() => {
-      if (playbackRef.current.currentSong?.id === targetSong.id && playbackRef.current.isBuffering) {
-        setPlayback(prev => ({
-          ...prev,
-          isPlaying: false,
-          isBuffering: false,
-          error: t('songUnavailable'),
-        }));
-      }
-    }, 12000);
-
     const startYtPlayback = (ytId: string) => {
       activeEngineRef.current = 'youtube';
       if (audioRef.current) {
@@ -709,64 +696,37 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       .catch(() => {});
 
     const isPlaceholderStream = /soundhelix\.com|example\.com/i.test(targetSong.streamUrl || '');
-    const isPreviewOnlyStream = targetSong.id.startsWith('itunes-');
     const hasDirectAudio = Boolean(
       targetSong.streamUrl &&
       !targetSong.youtubeId &&
-      !isPreviewOnlyStream &&
       targetSong.provider !== 'youtube' &&
       !isPlaceholderStream
     );
-
-    const playDirectAudio = (directSong: Song) => {
-      if (!audioRef.current || !directSong.streamUrl) return;
-      activeEngineRef.current = 'audio';
-      audioRef.current.src = directSong.streamUrl;
-      audioRef.current.load();
-      audioRef.current.play().catch(console.warn);
-      setPlayback(prev => ({
-        ...prev,
-        currentSong: directSong,
-        duration: directSong.duration || prev.duration,
-        isBuffering: true,
-      }));
-    };
 
     if (hasDirectAudio && audioRef.current) {
       activeEngineRef.current = 'audio';
       audioRef.current.src = targetSong.streamUrl;
       audioRef.current.load();
       audioRef.current.play().catch(console.warn);
+    } else if (targetSong.youtubeId && !isPlaceholderStream) {
+      startYtPlayback(targetSong.youtubeId);
     } else {
-      // Existing catalog songs may not have a direct URL. Resolve them through
-      // Jamendo instead of silently falling back to a YouTube iframe.
-      const controller = new AbortController();
-      const resolveTimeout = window.setTimeout(() => controller.abort(), 9000);
-      fetch(`/api/music/search?q=${encodeURIComponent(`${targetSong.title} ${targetSong.artistName}`)}&filter=songs`, {
-        signal: controller.signal,
-      })
+      activeEngineRef.current = 'youtube';
+      fetch(`/api/music/resolve-youtube?title=${encodeURIComponent(targetSong.title)}&artist=${encodeURIComponent(targetSong.artistName)}`)
         .then(res => res.json())
         .then(data => {
-          window.clearTimeout(resolveTimeout);
-          const directMatch = (data.songs || []).find((candidate: Song) =>
-            candidate.provider === 'jamendo_legal' &&
-            Boolean(candidate.streamUrl) &&
-            isSameSong(candidate, targetSong)
-          );
-          if (directMatch && playbackRef.current.currentSong?.id === targetSong.id) {
-            playDirectAudio(directMatch);
-            return;
+          if (data.youtubeId && playbackRef.current.currentSong?.id === targetSong.id) {
+            const updated = { ...targetSong, youtubeId: data.youtubeId, duration: data.duration || targetSong.duration };
+            setPlayback(prev => ({ ...prev, currentSong: updated, duration: data.duration || prev.duration }));
+            startYtPlayback(data.youtubeId);
           }
-          setPlayback(prev => ({
-            ...prev,
-            isPlaying: false,
-            isBuffering: false,
-            error: t('songUnavailable'),
-          }));
         })
         .catch(() => {
-          window.clearTimeout(resolveTimeout);
-          setPlayback(prev => ({ ...prev, isPlaying: false, isBuffering: false, error: t('songUnavailable') }));
+          if (targetSong.streamUrl && !isPlaceholderStream && audioRef.current) {
+            activeEngineRef.current = 'audio';
+            audioRef.current.src = targetSong.streamUrl;
+            audioRef.current.play().catch(console.warn);
+          }
         });
     }
 
@@ -793,12 +753,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const togglePlay = () => {
     if (activeEngineRef.current === 'youtube' && ytPlayerRef.current && isYtReadyRef.current) {
-      // A song restored from an older session may still have the old YouTube
-      // engine selected. Re-resolve it through the direct-audio path instead.
       if (playback.isPlaying) {
         ytPlayerRef.current.pauseVideo();
-      } else if (playback.currentSong) {
-        playSong(playback.currentSong, playback.queue);
+      } else {
+        ytPlayerRef.current.playVideo();
       }
     } else if (audioRef.current) {
       if (playback.isPlaying) {
@@ -819,9 +777,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const resume = () => {
     if (activeEngineRef.current === 'youtube' && ytPlayerRef.current && isYtReadyRef.current) {
-      if (playback.currentSong) {
-        playSong(playback.currentSong, playback.queue);
-      }
+      ytPlayerRef.current.playVideo();
     } else if (playback.currentSong && audioRef.current) {
       audioRef.current.play().catch(console.error);
     }

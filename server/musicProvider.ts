@@ -700,30 +700,7 @@ export class JamendoProvider implements MusicProvider {
   }
 
   public async search(query: string, filter?: string): Promise<SearchResult> {
-    // Keep the original catalog available when Jamendo is unavailable or has
-    // no match, so enabling background playback cannot break search.
-    if (filter && filter !== 'all' && filter !== 'songs') {
-      return defaultMusicProvider.search(query, filter);
-    }
-    const [jamendoSongs, catalogResults] = await Promise.all([
-      fetchJamendoTracks({ search: query.trim() }),
-      defaultMusicProvider.search(query, filter),
-    ]);
-    const songs = new Map<string, Song>();
-    jamendoSongs.forEach(song => songs.set(song.id, song));
-    catalogResults.songs.forEach(song => {
-      // Do not expose YouTube results while background-audio mode is active.
-      // A clicked YouTube result would switch playback back to an iframe.
-      if (!song.youtubeId && song.provider !== 'youtube' && !songs.has(song.id)) {
-        songs.set(song.id, song);
-      }
-    });
-    return {
-      songs: Array.from(songs.values()),
-      artists: catalogResults.artists,
-      albums: catalogResults.albums,
-      playlists: catalogResults.playlists,
-    };
+    return defaultMusicProvider.search(query, filter);
   }
 
   public async getTrack(trackId: string): Promise<Song | null> {
@@ -773,10 +750,6 @@ export class MusicService {
   }
 
   public getActiveProvider(): MusicProvider {
-    if (process.env.MUSIC_PROVIDER === 'jamendo' && this.providers.get('jamendo_legal')?.isEnabled()) {
-      return this.providers.get('jamendo_legal')!;
-    }
-
     // Check highest priority enabled provider
     const provConfigs = db.getProviders().sort((a, b) => a.priority - b.priority);
     for (const conf of provConfigs) {
