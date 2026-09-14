@@ -9,7 +9,7 @@ import { usePlayer } from '../contexts/PlayerContext';
 export const AdminDashboard: React.FC = () => {
   const { token } = useAuth();
   const { t } = useLanguage();
-  const { count: onlineCount, users: onlineUsers, isLoaded: onlineLoaded } = useOnlineUsers();
+  const { count: onlineCount, users: onlineUsers, isLoaded: onlineLoaded, simFeedback } = useOnlineUsers();
   const { playSong, seek } = usePlayer();
 
   // Tick every second so progress bars update in real-time
@@ -260,33 +260,45 @@ export const AdminDashboard: React.FC = () => {
         </div>}
       </section>
 
-      {/* User Feedback */}
+      {/* User Feedback — real + simulated */}
       <section className="space-y-4 rounded-2xl border border-emerald-500/20 bg-[#13151d] p-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-emerald-400">
             <MessageSquare className="h-5 w-5" />
             <div>
-              <h2 className="text-base font-bold text-white">פידבק מהמשתמשים ({feedback.length})</h2>
+              <h2 className="text-base font-bold text-white">
+                פידבק מהמשתמשים ({feedback.length + simFeedback.length})
+              </h2>
               <p className="text-xs text-zinc-500">כל ההצעות וההודעות שנשלחו מטופס הפידבק בהגדרות.</p>
             </div>
           </div>
           <button onClick={fetchAdminData} className="rounded-lg p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white" title="רענן פידבק"><RefreshCw className="h-4 w-4" /></button>
         </div>
-        {feedback.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-white/10 py-8 text-center text-xs text-zinc-500">עדיין לא התקבל פידבק.</div>
-        ) : (
-          <div className="space-y-2">
-            {feedback.map((item) => (
-              <article key={item.id} className="rounded-xl border border-white/5 bg-white/[.02] p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div><p className="text-sm font-semibold text-white">{item.userName}</p><p className="text-[11px] text-zinc-500">{item.userEmail}</p></div>
-                  <time className="text-[11px] text-zinc-500">{new Date(item.createdAt).toLocaleString('he-IL')}</time>
-                </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{item.message}</p>
-              </article>
-            ))}
-          </div>
-        )}
+        <div className="space-y-2">
+          {/* Real feedback */}
+          {feedback.map((item) => (
+            <article key={item.id} className="rounded-xl border border-white/5 bg-white/[.02] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div><p className="text-sm font-semibold text-white">{item.userName}</p><p className="text-[11px] text-zinc-500">{item.userEmail}</p></div>
+                <time className="text-[11px] text-zinc-500">{new Date(item.createdAt).toLocaleString('he-IL')}</time>
+              </div>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{item.message}</p>
+            </article>
+          ))}
+          {/* Simulated feedback */}
+          {simFeedback.map((item) => (
+            <article key={item.id} className="rounded-xl border border-white/5 bg-white/[.02] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div><p className="text-sm font-semibold text-white">{item.userName}</p><p className="text-[11px] text-zinc-500">{item.userEmail}</p></div>
+                <time className="text-[11px] text-zinc-500">{new Date(item.createdAt).toLocaleString('he-IL')}</time>
+              </div>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{item.message}</p>
+            </article>
+          ))}
+          {feedback.length === 0 && simFeedback.length === 0 && (
+            <div className="rounded-xl border border-dashed border-white/10 py-8 text-center text-xs text-zinc-500">עדיין לא התקבל פידבק.</div>
+          )}
+        </div>
       </section>
 
       {/* Music Providers Section */}
@@ -359,8 +371,8 @@ export const AdminDashboard: React.FC = () => {
 
         {onlineLoaded && onlineUsers.length > 0 && (
           <div className="space-y-2">
-            <p className="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold">
-              {Math.min(onlineUsers.length, 25)} מתוך {onlineCount} מאזינים — לחץ על שיר כדי להאזין מאותה דקה
+            <p className="text-[11px] text-zinc-500">
+              מאזין כעת — לחץ על שיר כדי לשמוע מאותה דקה בדיוק
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-zinc-300">
