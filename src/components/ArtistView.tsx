@@ -37,7 +37,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
       ? `?name=${encodeURIComponent(cachedArtist.nameHe || cachedArtist.name)}&imageUrl=${encodeURIComponent(cachedArtist.imageUrl || '')}&genre=${encodeURIComponent(cachedArtist.genres?.[0] || '')}`
       : '';
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 8000);
+    const timeout = window.setTimeout(() => controller.abort(), 20000);
     fetch(`/api/music/artist/${artistId}${query}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       signal: controller.signal,

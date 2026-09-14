@@ -43,8 +43,11 @@ async function getSpotifyAccessToken(): Promise<string | null> {
   if (!clientId || !clientSecret) return null;
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
     const response = await fetch('https://accounts.spotify.com/api/token', {
+      signal: controller.signal,
       method: 'POST',
       headers: {
         Authorization: `Basic ${credentials}`,
@@ -52,6 +55,7 @@ async function getSpotifyAccessToken(): Promise<string | null> {
       },
       body: 'grant_type=client_credentials',
     });
+    clearTimeout(timeoutId);
     if (!response.ok) return null;
     const data = await response.json() as { access_token?: string };
     return data.access_token || null;
@@ -63,7 +67,10 @@ async function getSpotifyAccessToken(): Promise<string | null> {
 async function fetchITunesArtistProfile(artist: Artist): Promise<Artist> {
   const name = (artist.nameHe || artist.name).trim();
   try {
-    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(name)}&entity=song&limit=25`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(name)}&entity=song&limit=25`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!response.ok) return artist;
     const data = await response.json() as { results?: Array<{ artistName?: string; artworkUrl100?: string; primaryGenreName?: string }> };
     const match = (data.results || []).find(item => item.artistName?.toLocaleLowerCase() === name.toLocaleLowerCase()) || data.results?.[0];
@@ -92,9 +99,13 @@ async function fetchSpotifyArtistProfile(artist: Artist): Promise<Artist> {
   }
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
     const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(name)}&type=artist&limit=5`, {
+      signal: controller.signal,
       headers: { Authorization: `Bearer ${token}` },
     });
+    clearTimeout(timeoutId);
     if (!response.ok) {
       spotifyArtistCache.set(key, null);
       return fetchITunesArtistProfile(artist);
@@ -137,9 +148,13 @@ async function fetchRealArtistImage(artist: Artist): Promise<Artist> {
   if (!hasAlbumArt && !artist.imageUrl.includes('unsplash')) return artist;
   if (!artistImageCache.has(name)) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
       const response = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`, {
+        signal: controller.signal,
         headers: { 'User-Agent': 'SimplyMusic/2.0 (artist profiles)' },
       });
+      clearTimeout(timeoutId);
       const data = response.ok ? await response.json() as { originalimage?: { source?: string }; thumbnail?: { source?: string } } : {};
       artistImageCache.set(name, data.originalimage?.source || data.thumbnail?.source || null);
     } catch {
