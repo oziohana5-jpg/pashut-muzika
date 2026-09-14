@@ -658,7 +658,7 @@ apiRouter.get('/music/artist/:id', async (req: AuthenticatedRequest, res) => {
   });
 });
 
-apiRouter.get('/music/album/:id', async (req, res) => {
+apiRouter.get(['/music/album/:id', '/music/albums/:id'], async (req, res) => {
   const provider = musicService.getActiveProvider();
   const data = await provider.getAlbum(req.params.id);
   if (!data) {

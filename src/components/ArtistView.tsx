@@ -188,7 +188,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
       {/* Popular Tracks Section */}
       <section className="mx-auto max-w-6xl space-y-3 px-5 sm:px-10">
         <h2 className="text-xl font-bold text-white tracking-tight">
-          {t('popularTracks')}
+            {language === 'he' ? 'כל השירים' : 'All songs'}
         </h2>
         <div className="space-y-1">
           {songs.map((song, index) => {

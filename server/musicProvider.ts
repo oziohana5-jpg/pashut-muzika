@@ -640,6 +640,20 @@ export class LicensedCatalogProvider implements MusicProvider {
                   licenseInfo: 'Licensed Catalog Master Stream',
                 };
                 db.upsertSong(s);
+                const importedAlbumId = `itunes-alb-${item.collectionId || item.trackId}`;
+                if (!db.getAlbumById(importedAlbumId) && item.collectionName) {
+                  db.upsertAlbum({
+                    id: importedAlbumId,
+                    title: item.collectionName,
+                    titleHe: item.collectionName,
+                    artistId,
+                    artistName: item.artistName,
+                    coverUrl,
+                    releaseYear: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 2024,
+                    genres: [item.primaryGenreName || 'Music'],
+                    trackCount: item.trackCount || 1,
+                  });
+                }
               }
             }
           }
