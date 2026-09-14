@@ -683,9 +683,10 @@ export class LicensedCatalogProvider implements MusicProvider {
                   isFullLength: true,
                   licenseInfo: 'Licensed Catalog Master Stream',
                 };
-                db.upsertSong(s);
+                db.upsertSong(s, false);
               }
             }
+            db.save();
           }
         }
       } catch (err) {

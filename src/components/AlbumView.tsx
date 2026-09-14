@@ -24,7 +24,7 @@ export const AlbumView: React.FC<AlbumViewProps> = ({ albumId, onNavigateArtist 
       .then((res) => res.json())
       .then((data) => {
         setAlbum(data.album);
-        setSongs(data.songs || []);
+        setSongs(data.tracks || data.songs || []);
       })
       .catch((err) => console.error('Failed to load album:', err))
       .finally(() => setLoading(false));
