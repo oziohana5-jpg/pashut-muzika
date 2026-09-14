@@ -44,7 +44,7 @@ async function getSpotifyAccessToken(): Promise<string | null> {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
     const response = await fetch('https://accounts.spotify.com/api/token', {
       signal: controller.signal,
@@ -68,7 +68,7 @@ async function fetchITunesArtistProfile(artist: Artist): Promise<Artist> {
   const name = (artist.nameHe || artist.name).trim();
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
     const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(name)}&entity=song&limit=25`, { signal: controller.signal });
     clearTimeout(timeoutId);
     if (!response.ok) return artist;
@@ -250,7 +250,7 @@ async function fetchOnlineCatalog(query: string, filter?: string): Promise<{ son
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
 
     const term = encodeURIComponent(query);
     const searchUrl = `https://itunes.apple.com/search?term=${term}&entity=song&limit=80`;
@@ -303,7 +303,7 @@ async function fetchOnlineCatalog(query: string, filter?: string): Promise<{ son
           };
 
           songs.push(song);
-          db.upsertSong(song);
+          db.upsertSong(song, false);
 
           // Register artist
           if (!seenArtists.has(artistId) && item.artistName) {
@@ -347,6 +347,7 @@ async function fetchOnlineCatalog(query: string, filter?: string): Promise<{ son
     console.error('Online zero-token catalog search error (graceful fallback):', err);
   }
 
+  if (songs.length > 0) db.save();
   return { songs, artists, albums };
 }
 
@@ -358,7 +359,7 @@ export async function searchYouTubeTracks(query: string): Promise<Song[]> {
   try {
     const term = encodeURIComponent(query.trim() + ' audio official');
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), 2500);
     const res = await fetch(`https://www.youtube.com/results?search_query=${term}`, {
       signal: controller.signal,
       headers: {
@@ -413,7 +414,7 @@ export async function searchYouTubeTracks(query: string): Promise<Song[]> {
           licenseInfo: 'YouTube Official Full Track',
         };
         songs.push(song);
-        db.upsertSong(song);
+        db.upsertSong(song, false);
         db.upsertArtist({
           id: song.artistId,
           name: song.artistName,
@@ -429,6 +430,7 @@ export async function searchYouTubeTracks(query: string): Promise<Song[]> {
         if (songs.length >= 12) break;
       }
     }
+    if (songs.length > 0) db.save();
     return songs;
   } catch (err) {
     console.warn('YouTube search parse error:', err);
@@ -443,7 +445,7 @@ export async function resolveYouTubeForTrack(title: string, artistName: string):
   try {
     const term = encodeURIComponent(`${artistName} ${title} שיר רשמי`);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), 2500);
     const res = await fetch(`https://www.youtube.com/results?search_query=${term}`, {
       signal: controller.signal,
       headers: {
@@ -786,6 +788,36 @@ export class LicensedCatalogProvider implements MusicProvider {
         return false;
       }
     });
+
+    if (artist && artistId.startsWith('art-yt-') && allTracks.length < 20) {
+      const youtubeArtistName = artist.name.replace(/\s*(הערוץ הרשמי|official channel|official)$/i, '').trim();
+      const youtubeTracks = await searchYouTubeTracks(youtubeArtistName);
+      const singlesAlbumId = `yt-album-${artistId}`;
+      const singlesAlbum: Album = {
+        id: singlesAlbumId,
+        title: 'YouTube Singles',
+        titleHe: 'סינגלים מ־YouTube',
+        artistId,
+        artistName: artist.name,
+        coverUrl: youtubeTracks[0]?.coverUrl || artist.imageUrl,
+        releaseYear: new Date().getFullYear(),
+        genres: artist.genres,
+        trackCount: youtubeTracks.length,
+      };
+      db.upsertAlbum(singlesAlbum);
+      for (const sourceSong of youtubeTracks) {
+        const song = {
+          ...sourceSong,
+          artistId,
+          artistName: artist.name,
+          albumId: singlesAlbumId,
+          albumName: singlesAlbum.titleHe || singlesAlbum.title,
+        };
+        db.upsertSong(song, false);
+        if (!allTracks.some(existing => existing.id === song.id)) allTracks.push(song);
+      }
+      if (youtubeTracks.length > 0) db.save();
+    }
 
     // A local artist can have only a few seeded tracks. Fill the profile from
     // the public iTunes catalog so artist pages are not limited to the local

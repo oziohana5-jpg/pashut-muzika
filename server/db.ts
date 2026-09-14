@@ -1127,14 +1127,14 @@ class Database {
     return this.data.songs.find(s => s.id === id);
   }
 
-  public upsertSong(song: Song): void {
+  public upsertSong(song: Song, persist = true): void {
     const idx = this.data.songs.findIndex(s => s.id === song.id);
     if (idx >= 0) {
       this.data.songs[idx] = { ...this.data.songs[idx], ...song };
     } else {
       this.data.songs.push(song);
     }
-    this.save();
+    if (persist) this.save();
   }
 
   public incrementSongPlays(id: string): void {
