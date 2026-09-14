@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const EMOJIS = ['✨', '💿', '🎵', '💜', '⚡', '🌈', '🎧', '💫', '🎶', '⭐', '🎼', '🎛️', '🎚️', '🔊', '🎤', '🪩', '📀'];
@@ -36,30 +36,33 @@ const getCaretPosition = (element: HTMLInputElement | HTMLTextAreaElement) => {
 export const EmojiConfetti: React.FC = () => {
   const { confettiEnabled } = useTheme();
   const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
+  const burstActive = useRef(false);
 
   useEffect(() => {
     if (!confettiEnabled) return;
-    let lastBurst = 0;
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target || !['INPUT', 'TEXTAREA'].includes(target.tagName) || event.key.length !== 1) return;
+      if (burstActive.current) return;
+      burstActive.current = true;
       const now = Date.now();
-      if (now - lastBurst < 550) return;
-      lastBurst = now;
       const caret = getCaretPosition(target as HTMLInputElement | HTMLTextAreaElement);
       const fallDistance = Math.max(0, window.innerHeight - caret.top + 56);
-      const burst = Array.from({ length: 8 }, (_, index) => ({
+      const burst = Array.from({ length: 14 }, (_, index) => ({
         id: now + index,
         emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
-        left: caret.left + (Math.random() - 0.5) * 18,
-        top: caret.top + (Math.random() - 0.5) * 10,
-        delay: Math.random() * 120,
+        left: caret.left + (Math.random() - 0.5) * 24,
+        top: caret.top + (Math.random() - 0.5) * 14,
+        delay: Math.random() * 220,
         size: 14 + Math.random() * 10,
         drift: -60 + Math.random() * 120,
         fallDistance,
       }));
       setPieces((current) => [...current, ...burst].slice(-32));
-      window.setTimeout(() => setPieces((current) => current.filter((piece) => !burst.some((item) => item.id === piece.id))), 4600);
+      window.setTimeout(() => {
+        setPieces((current) => current.filter((piece) => !burst.some((item) => item.id === piece.id)));
+        burstActive.current = false;
+      }, 4900);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
