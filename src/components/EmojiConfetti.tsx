@@ -47,7 +47,7 @@ export const EmojiConfetti: React.FC = () => {
       burstActive.current = true;
       const now = Date.now();
       const caret = getCaretPosition(target as HTMLInputElement | HTMLTextAreaElement);
-      const fallDistance = Math.max(0, window.innerHeight - caret.top + 56);
+      const fallDistance = Math.max(0, window.innerHeight - caret.top + 180);
       const burst = Array.from({ length: 14 }, (_, index) => ({
         id: now + index,
         emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
@@ -62,7 +62,7 @@ export const EmojiConfetti: React.FC = () => {
       window.setTimeout(() => {
         setPieces((current) => current.filter((piece) => !burst.some((item) => item.id === piece.id)));
         burstActive.current = false;
-      }, 4900);
+      }, 8600);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
