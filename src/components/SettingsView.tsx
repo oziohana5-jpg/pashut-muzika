@@ -208,10 +208,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onNavigateTab }) => 
                 {option.preview.map((color) => <i key={color} className="h-full flex-1 rounded-lg" style={{ background: color }} />)}
               </span>
               <span className="block text-xs font-bold text-white">{option.id === 'custom' ? 'מותאם אישית' : option.name}</span>
-              <span className="mt-0.5 block truncate text-[10px] text-zinc-500">{option.description}</span>
+              <span className={`mt-0.5 block truncate text-[10px] ${option.id === 'custom' ? 'font-bold text-[var(--app-accent)]' : 'text-zinc-500'}`}>{option.id === 'custom' ? 'לחצו כאן לעריכת כל הגוונים' : option.description}</span>
             </button>
           ))}
         </div>
+
+        {themeId !== 'custom' && (
+          <button type="button" onClick={() => setThemeId('custom')} className="relative flex w-full items-center justify-between gap-4 rounded-2xl border border-[var(--app-accent)]/30 bg-[var(--app-accent)]/10 p-3.5 text-start transition hover:bg-[var(--app-accent)]/15">
+            <span><span className="block text-xs font-black text-white">רוצים לבנות סגנון משלכם?</span><span className="mt-1 block text-[10px] text-zinc-400">פתחו התאמה אישית ושנו את כל חמשת גווני הממשק</span></span>
+            <span className="shrink-0 rounded-xl bg-[var(--app-accent)] px-3 py-2 text-[10px] font-black text-white">פתח התאמה אישית</span>
+          </button>
+        )}
 
         {themeId === 'custom' && (
           <div className="relative grid gap-2 rounded-2xl border border-white/10 bg-black/15 p-3.5 sm:grid-cols-2">
