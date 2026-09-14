@@ -624,6 +624,20 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
               <button
                 onClick={() => {
                   if (onNavigateArtist && song.artistId) {
+                    try {
+                      sessionStorage.setItem(`simply_music_artist_${song.artistId}`, JSON.stringify({
+                        id: song.artistId,
+                        name: song.artistName,
+                        nameHe: song.artistName,
+                        imageUrl: song.coverUrl,
+                        bannerUrl: song.coverUrl,
+                        genres: [song.genre || 'Music'],
+                        bio: `Artist profile for ${song.artistName}`,
+                        bioHe: `פרופיל האמן של ${song.artistName}`,
+                        monthlyListeners: 0,
+                        verified: false,
+                      }));
+                    } catch {}
                     closeFullPlayer();
                     onNavigateArtist(song.artistId);
                   }

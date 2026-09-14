@@ -46,7 +46,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
     setLoading(true);
     const handler = setTimeout(() => {
       searchMusic(trimmed, filter);
-    }, 180);
+    }, 60);
 
     return () => {
       clearTimeout(handler);

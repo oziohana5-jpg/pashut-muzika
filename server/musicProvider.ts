@@ -588,6 +588,10 @@ export class LicensedCatalogProvider implements MusicProvider {
       albums: matchedAlbums,
       playlists: matchedPlaylists,
     };
+    if (matchedSongs.length || matchedArtists.length || matchedAlbums.length || matchedPlaylists.length) {
+      searchCache.set(cacheKey, { expiresAt: Date.now() + SEARCH_CACHE_TTL, result: localResult });
+      return localResult;
+    }
     const onlinePromise = fetchOnlineCatalog(query, filter);
     const youtubePromise = filter === 'songs'
       ? searchYouTubeTracks(query)
