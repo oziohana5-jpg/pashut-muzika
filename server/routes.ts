@@ -627,9 +627,33 @@ apiRouter.get('/music/artist/:id', async (req: AuthenticatedRequest, res) => {
   const provider = musicService.getActiveProvider();
   const data = await provider.getArtist(req.params.id);
   if (!data) {
-    const name = String(req.query.name || '').trim();
+    const storedArtist = db.getArtistById(req.params.id);
+    const storedTrack = db.getSongs().find(song => song.artistId === req.params.id);
+    const name = String(req.query.name || storedArtist?.name || storedTrack?.artistName || '').trim();
     if (!name) {
-      res.status(404).json({ error: 'Artist not found.' });
+      const idName = req.params.id
+        .replace(/^(?:spotify|jamendo)-art-/, '')
+        .replace(/[-_]+/g, ' ')
+        .trim();
+      if (!idName || /^\d+$/.test(idName)) {
+        res.status(404).json({ error: 'Artist not found.' });
+        return;
+      }
+      const fallbackFromId = {
+        id: req.params.id,
+        name: idName,
+        nameHe: idName,
+        bio: `Artist profile for ${idName}`,
+        bioHe: `פרופיל האמן של ${idName}`,
+        imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+        bannerUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1600&auto=format&fit=crop&q=80',
+        monthlyListeners: 0,
+        genres: ['Music'],
+        verified: false,
+      };
+      const enrichedFromId = await enrichArtistFromSpotify(fallbackFromId);
+      db.upsertArtist(enrichedFromId);
+      res.json({ artist: enrichedFromId, topTracks: [], albums: [], singles: [], isFollowing: false });
       return;
     }
     const fallbackArtist = {
