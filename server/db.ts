@@ -1161,6 +1161,7 @@ class Database {
     } else {
       this.data.artists.push(artist);
     }
+    this.save();
   }
 
   // Albums

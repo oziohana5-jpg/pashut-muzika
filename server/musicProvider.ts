@@ -395,7 +395,7 @@ export async function searchYouTubeTracks(query: string): Promise<Song[]> {
           id: `yt-${v.videoId}`,
           title,
           titleHe: title,
-          artistId: `art-yt-${encodeURIComponent(channelName).slice(0, 20)}`,
+          artistId: `art-yt-${Buffer.from(channelName).toString('base64url').slice(0, 32)}`,
           artistName: channelName,
           albumId: 'alb-yt-singles',
           albumName: 'שיר מלא ביוטיוב',
@@ -693,7 +693,8 @@ export class LicensedCatalogProvider implements MusicProvider {
   }
 
   public async getArtist(artistId: string): Promise<{ artist: Artist; topTracks: Song[]; albums: Album[]; singles: Song[] } | null> {
-    let artist = db.getArtistById(artistId);
+    const decodedArtistId = decodeURIComponent(artistId);
+    let artist = db.getArtistById(artistId) || db.getArtistById(decodedArtistId);
 
     // If online itunes artist, fetch their real songs and details
     if (artistId.startsWith('itunes-art-')) {
@@ -777,7 +778,14 @@ export class LicensedCatalogProvider implements MusicProvider {
       }
     }
 
-    const allTracks = db.getSongs().filter(s => s.artistId === artistId);
+    const allTracks = db.getSongs().filter(s => {
+      if (s.artistId === artistId || s.artistId === decodedArtistId) return true;
+      try {
+        return decodeURIComponent(s.artistId) === decodedArtistId;
+      } catch {
+        return false;
+      }
+    });
     if (!artist && allTracks.length > 0) {
       const firstTrack = allTracks[0];
       artist = {
