@@ -563,10 +563,10 @@ export const SettingsView: React.FC = () => {
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
               <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
                 <Sparkles className="w-4 h-4" />
-                <span>הבית של המוזיקה הישראלית</span>
+                <span>מוזיקה איכותית לכולם</span>
               </div>
               <p className="text-zinc-400 text-xs">
-                כל הלהיטים של עומר אדם, אושר כהן, פאר טסי, חנן בן ארי, טונה ועוד עשרות אמנים.
+                מוזיקה איכותית מכל הסגנונות, עם להיטים ישראליים ובינלאומיים ועוד עשרות אמנים.
               </p>
             </div>
 
