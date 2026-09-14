@@ -704,6 +704,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onNavigateTab }) => 
               </button>
             </form>
           )}
+
+          {/* Admin replies — shown if user has received a reply */}
+          {(() => {
+            try {
+              const replies: Record<string, { reply: string; repliedAt: string }> = JSON.parse(localStorage.getItem('sim_feedback_replies') || '{}');
+              const entries = Object.entries(replies);
+              if (!entries.length) return null;
+              return (
+                <div className="space-y-2 pt-1">
+                  {entries.map(([id, { reply, repliedAt }]) => (
+                    <div key={id} className="rounded-xl border border-blue-500/20 bg-blue-500/5 px-3 py-3">
+                      <p className="text-[11px] font-semibold text-blue-400 mb-1 flex items-center gap-1">
+                        <Shield className="w-3 h-3" />
+                        תגובת הצוות · {new Date(repliedAt).toLocaleString('he-IL')}
+                      </p>
+                      <p className="text-sm text-zinc-200">{reply}</p>
+                    </div>
+                  ))}
+                </div>
+              );
+            } catch { return null; }
+          })()}
         </div>
       </section>
 

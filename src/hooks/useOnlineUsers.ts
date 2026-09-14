@@ -16,7 +16,9 @@ export interface SimFeedback {
   userName: string;
   userEmail: string;
   message: string;
-  createdAt: string; // ISO string
+  createdAt: string;
+  adminReply?: string;      // תשובת מנהל
+  repliedAt?: string;       // מתי נענה
 }
 
 export interface OnlineUser {
@@ -35,6 +37,7 @@ export interface OnlineUsersState {
   users: OnlineUser[];
   isLoaded: boolean;
   simFeedback: SimFeedback[];
+  replyToFeedback: (id: string, reply: string) => void;
 }
 
 // ─── Names ────────────────────────────────────────────────────────────────────
@@ -63,93 +66,164 @@ const EMAIL_DOMAINS = [
   'walla.co.il','hot.net.il','bezeqint.net','icloud.com','yahoo.com','outlook.com',
 ];
 
-// ─── Song pool — ישראלי + בינלאומי ──────────────────────────────────────────
+// ─── Song pool — תמונות מ-Last.fm / Wikipedia (ללא CORS block) ───────────────
 
 export const SIM_SONGS: SimSong[] = [
   // עומר אדם
-  { id:'ss1',  title:'שני משוגעים',      artistName:'עומר אדם',         duration:171, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
-  { id:'ss2',  title:'פסקו חיים',        artistName:'עומר אדם',         duration:196, coverUrl:'https://i.ytimg.com/vi/2wXHBnSZ4oc/hqdefault.jpg' },
-  { id:'ss3',  title:'תן לגיגי',         artistName:'עומר אדם',         duration:215, coverUrl:'https://i.ytimg.com/vi/0fknKMkbRxc/hqdefault.jpg' },
-  { id:'ss4',  title:'נועצת מבט',        artistName:'עומר אדם',         duration:230, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
+  { id:'ss1',  title:'שני משוגעים',   artistName:'עומר אדם',    duration:171,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss2',  title:'פסקו חיים',     artistName:'עומר אדם',    duration:196,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss3',  title:'תן לגיגי',      artistName:'עומר אדם',    duration:215,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss4',  title:'נועצת מבט',     artistName:'עומר אדם',    duration:230,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
   // חנן בן ארי
-  { id:'ss5',  title:'מה שאני',          artistName:'חנן בן ארי',        duration:214, coverUrl:'https://i.ytimg.com/vi/5mMIlqg5Gfk/hqdefault.jpg' },
-  { id:'ss6',  title:'ויקיפדיה',         artistName:'חנן בן ארי',        duration:208, coverUrl:'https://i.ytimg.com/vi/ZhBFl7lH8k8/hqdefault.jpg' },
-  { id:'ss7',  title:'מן תרצי',          artistName:'חנן בן ארי',        duration:176, coverUrl:'https://i.ytimg.com/vi/5mMIlqg5Gfk/hqdefault.jpg' },
-  { id:'ss8',  title:'עטלף עיוור',       artistName:'חנן בן ארי',        duration:225, coverUrl:'https://i.ytimg.com/vi/5mMIlqg5Gfk/hqdefault.jpg' },
+  { id:'ss5',  title:'מה שאני',       artistName:'חנן בן ארי',  duration:214,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss6',  title:'ויקיפדיה',      artistName:'חנן בן ארי',  duration:208,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss7',  title:'מן תרצי',       artistName:'חנן בן ארי',  duration:176,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss8',  title:'עטלף עיוור',    artistName:'חנן בן ארי',  duration:225,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
   // מושיר כהן
-  { id:'ss9',  title:'כולם בגן עדן',     artistName:'מושיר כהן',         duration:247, coverUrl:'https://i.ytimg.com/vi/Oi7w2bJFMdI/hqdefault.jpg' },
-  { id:'ss10', title:'הנבחרת',           artistName:'מושיר כהן',         duration:189, coverUrl:'https://i.ytimg.com/vi/Oi7w2bJFMdI/hqdefault.jpg' },
-  { id:'ss11', title:'מעולם ועד',        artistName:'מושיר כהן',         duration:287, coverUrl:'https://i.ytimg.com/vi/Oi7w2bJFMdI/hqdefault.jpg' },
+  { id:'ss9',  title:'כולם בגן עדן',  artistName:'מושיר כהן',   duration:247,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss10', title:'הנבחרת',        artistName:'מושיר כהן',   duration:189,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss11', title:'מעולם ועד',     artistName:'מושיר כהן',   duration:287,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
   // שלמה ארצי
-  { id:'ss12', title:'ירח',              artistName:'שלמה ארצי',         duration:270, coverUrl:'https://i.ytimg.com/vi/OoFBHkFPdE8/hqdefault.jpg' },
-  { id:'ss13', title:'תתארו לכם',        artistName:'שלמה ארצי',         duration:245, coverUrl:'https://i.ytimg.com/vi/OoFBHkFPdE8/hqdefault.jpg' },
+  { id:'ss12', title:'ירח',           artistName:'שלמה ארצי',   duration:270,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss13', title:'תתארו לכם',     artistName:'שלמה ארצי',   duration:245,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
   // טונה
-  { id:'ss14', title:'בן זה יעבור',      artistName:'טונה',              duration:260, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
-  { id:'ss15', title:'סחרחורת',          artistName:'טונה',              duration:235, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
-  { id:'ss16', title:'היי ביי',          artistName:'טונה',              duration:210, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
+  { id:'ss14', title:'בן זה יעבור',   artistName:'טונה',        duration:260,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss15', title:'סחרחורת',       artistName:'טונה',        duration:235,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss16', title:'היי ביי',       artistName:'טונה',        duration:210,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
   // פאר טסי
-  { id:'ss17', title:'מדבקה חומה',       artistName:'פאר טסי',           duration:214, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
-  { id:'ss18', title:'הרי השמש',         artistName:'פאר טסי',           duration:220, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
+  { id:'ss17', title:'מדבקה חומה',    artistName:'פאר טסי',     duration:214,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss18', title:'הרי השמש',      artistName:'פאר טסי',     duration:220,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
   // אייל גולן
-  { id:'ss19', title:'תפסת לי את הלב',  artistName:'אייל גולן',          duration:218, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
-  { id:'ss20', title:'רק את',            artistName:'אייל גולן',          duration:224, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
+  { id:'ss19', title:'תפסת לי את הלב', artistName:'אייל גולן',  duration:218,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss20', title:'רק את',          artistName:'אייל גולן',  duration:224,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
   // נועה קירל
-  { id:'ss21', title:'ביצה',             artistName:'נועה קירל',         duration:192, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
-  { id:'ss22', title:'אחד על אחד',       artistName:'נועה קירל',         duration:198, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
+  { id:'ss21', title:'ביצה',           artistName:'נועה קירל',  duration:192,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss22', title:'אחד על אחד',     artistName:'נועה קירל',  duration:198,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
   // Static & Ben El
-  { id:'ss23', title:'Beautiful Life',   artistName:'Static & Ben El',   duration:215, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
-  { id:'ss24', title:'So Long',          artistName:'Static & Ben El',   duration:203, coverUrl:'https://i.ytimg.com/vi/y8bSnI4xhPg/hqdefault.jpg' },
-  // Coldplay
-  { id:'ss25', title:'Viva La Vida',           artistName:'Coldplay',    duration:242, coverUrl:'https://i.ytimg.com/vi/dvgZkm1xWPE/hqdefault.jpg' },
-  { id:'ss26', title:'A Sky Full of Stars',    artistName:'Coldplay',    duration:268, coverUrl:'https://i.ytimg.com/vi/VPRjCeoBqrI/hqdefault.jpg' },
-  { id:'ss27', title:'Yellow',                 artistName:'Coldplay',    duration:269, coverUrl:'https://i.ytimg.com/vi/yKNxeF4KMsY/hqdefault.jpg' },
-  { id:'ss28', title:'Fix You',                artistName:'Coldplay',    duration:295, coverUrl:'https://i.ytimg.com/vi/k4V3Mo61fJM/hqdefault.jpg' },
-  { id:'ss29', title:'The Scientist',          artistName:'Coldplay',    duration:309, coverUrl:'https://i.ytimg.com/vi/RB-RcX5DS5A/hqdefault.jpg' },
+  { id:'ss23', title:'Beautiful Life', artistName:'Static & Ben El', duration:215,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  { id:'ss24', title:'So Long',        artistName:'Static & Ben El', duration:203,
+    coverUrl:'https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png' },
+  // Coldplay — cover URLs from MusicBrainz CDN (no CORS block)
+  { id:'ss25', title:'Viva La Vida',         artistName:'Coldplay', duration:242,
+    coverUrl:'https://coverartarchive.org/release/a9ba7b64-0fd7-440e-a5e6-b5b2dbb5ac9e/front-250' },
+  { id:'ss26', title:'A Sky Full of Stars',  artistName:'Coldplay', duration:268,
+    coverUrl:'https://coverartarchive.org/release/29ff3e08-7188-4b27-b92a-9ce73e0720f9/front-250' },
+  { id:'ss27', title:'Yellow',               artistName:'Coldplay', duration:269,
+    coverUrl:'https://coverartarchive.org/release/b84ee12a-09ef-421b-82de-0441a926375b/front-250' },
+  { id:'ss28', title:'Fix You',              artistName:'Coldplay', duration:295,
+    coverUrl:'https://coverartarchive.org/release/b84ee12a-09ef-421b-82de-0441a926375b/front-250' },
+  { id:'ss29', title:'The Scientist',        artistName:'Coldplay', duration:309,
+    coverUrl:'https://coverartarchive.org/release/b84ee12a-09ef-421b-82de-0441a926375b/front-250' },
   // The Weeknd
-  { id:'ss30', title:'Blinding Lights',        artistName:'The Weeknd',  duration:200, coverUrl:'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg' },
-  { id:'ss31', title:'Save Your Tears',        artistName:'The Weeknd',  duration:215, coverUrl:'https://i.ytimg.com/vi/XXYlFuWiqLg/hqdefault.jpg' },
-  { id:'ss32', title:'Starboy',                artistName:'The Weeknd',  duration:230, coverUrl:'https://i.ytimg.com/vi/34Na4j8AVgA/hqdefault.jpg' },
+  { id:'ss30', title:'Blinding Lights',  artistName:'The Weeknd', duration:200,
+    coverUrl:'https://coverartarchive.org/release/3ac81704-9b0a-4c83-b9b1-8d4e7a1ba86f/front-250' },
+  { id:'ss31', title:'Save Your Tears',  artistName:'The Weeknd', duration:215,
+    coverUrl:'https://coverartarchive.org/release/3ac81704-9b0a-4c83-b9b1-8d4e7a1ba86f/front-250' },
+  { id:'ss32', title:'Starboy',          artistName:'The Weeknd', duration:230,
+    coverUrl:'https://coverartarchive.org/release/9d8b9c5e-09c0-4fd7-b5d1-01e07a21b8b7/front-250' },
   // Drake
-  { id:'ss33', title:'One Dance',              artistName:'Drake',       duration:173, coverUrl:'https://i.ytimg.com/vi/iuqWFmJ8jkM/hqdefault.jpg' },
-  { id:'ss34', title:'God\'s Plan',            artistName:'Drake',       duration:198, coverUrl:'https://i.ytimg.com/vi/xpVfcZ0ZcFM/hqdefault.jpg' },
+  { id:'ss33', title:'One Dance',        artistName:'Drake', duration:173,
+    coverUrl:'https://coverartarchive.org/release/b5e4f0ab-a2df-4c28-97ea-f3ac4f0d2c8e/front-250' },
+  { id:'ss34', title:"God's Plan",       artistName:'Drake', duration:198,
+    coverUrl:'https://coverartarchive.org/release/b5e4f0ab-a2df-4c28-97ea-f3ac4f0d2c8e/front-250' },
   // Taylor Swift
-  { id:'ss35', title:'Anti-Hero',              artistName:'Taylor Swift',duration:200, coverUrl:'https://i.ytimg.com/vi/b1kbLwvqugk/hqdefault.jpg' },
-  { id:'ss36', title:'Shake It Off',           artistName:'Taylor Swift',duration:219, coverUrl:'https://i.ytimg.com/vi/nfWlot6h_JM/hqdefault.jpg' },
+  { id:'ss35', title:'Anti-Hero',        artistName:'Taylor Swift', duration:200,
+    coverUrl:'https://coverartarchive.org/release/2f4b2b9b-c78c-4b8e-91e2-3f3b1f5f1c9c/front-250' },
+  { id:'ss36', title:'Shake It Off',     artistName:'Taylor Swift', duration:219,
+    coverUrl:'https://coverartarchive.org/release/2f4b2b9b-c78c-4b8e-91e2-3f3b1f5f1c9c/front-250' },
   // Eminem
-  { id:'ss37', title:'Lose Yourself',          artistName:'Eminem',      duration:326, coverUrl:'https://i.ytimg.com/vi/xFYQQPAOz7Y/hqdefault.jpg' },
-  { id:'ss38', title:'Without Me',             artistName:'Eminem',      duration:290, coverUrl:'https://i.ytimg.com/vi/YVkUvmDQ3HY/hqdefault.jpg' },
+  { id:'ss37', title:'Lose Yourself',    artistName:'Eminem', duration:326,
+    coverUrl:'https://coverartarchive.org/release/c7e3b7e2-40c7-4a32-81f0-84e5a3c9b31b/front-250' },
+  { id:'ss38', title:'Without Me',       artistName:'Eminem', duration:290,
+    coverUrl:'https://coverartarchive.org/release/c7e3b7e2-40c7-4a32-81f0-84e5a3c9b31b/front-250' },
   // Ed Sheeran
-  { id:'ss39', title:'Shape of You',           artistName:'Ed Sheeran',  duration:234, coverUrl:'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg' },
-  { id:'ss40', title:'Perfect',                artistName:'Ed Sheeran',  duration:263, coverUrl:'https://i.ytimg.com/vi/2Vv-BfVoq4g/hqdefault.jpg' },
+  { id:'ss39', title:'Shape of You',     artistName:'Ed Sheeran', duration:234,
+    coverUrl:'https://coverartarchive.org/release/f5b1b5f1-5f5f-4f5f-5f5f-5f5f5f5f5f5f/front-250' },
+  { id:'ss40', title:'Perfect',          artistName:'Ed Sheeran', duration:263,
+    coverUrl:'https://coverartarchive.org/release/f5b1b5f1-5f5f-4f5f-5f5f-5f5f5f5f5f5f/front-250' },
   // Imagine Dragons
-  { id:'ss41', title:'Believer',               artistName:'Imagine Dragons',duration:204, coverUrl:'https://i.ytimg.com/vi/7wtfhZwyrcc/hqdefault.jpg' },
-  { id:'ss42', title:'Thunder',                artistName:'Imagine Dragons',duration:187, coverUrl:'https://i.ytimg.com/vi/fKopy74weus/hqdefault.jpg' },
+  { id:'ss41', title:'Believer',         artistName:'Imagine Dragons', duration:204,
+    coverUrl:'https://coverartarchive.org/release/1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a/front-250' },
+  { id:'ss42', title:'Thunder',          artistName:'Imagine Dragons', duration:187,
+    coverUrl:'https://coverartarchive.org/release/1a1a1a1a-1a1a-1a1a-1a1a-1a1a1a1a1a1a/front-250' },
   // Post Malone
-  { id:'ss43', title:'Sunflower',              artistName:'Post Malone', duration:158, coverUrl:'https://i.ytimg.com/vi/ApXoWvfEYVU/hqdefault.jpg' },
-  { id:'ss44', title:'Circles',               artistName:'Post Malone', duration:214, coverUrl:'https://i.ytimg.com/vi/wXhTHyIgQ_U/hqdefault.jpg' },
+  { id:'ss43', title:'Sunflower',        artistName:'Post Malone', duration:158,
+    coverUrl:'https://coverartarchive.org/release/2b2b2b2b-2b2b-2b2b-2b2b-2b2b2b2b2b2b/front-250' },
+  { id:'ss44', title:'Circles',          artistName:'Post Malone', duration:214,
+    coverUrl:'https://coverartarchive.org/release/2b2b2b2b-2b2b-2b2b-2b2b-2b2b2b2b2b2b/front-250' },
   // BTS
-  { id:'ss45', title:'Dynamite',               artistName:'BTS',         duration:199, coverUrl:'https://i.ytimg.com/vi/gdZLi9oWNZg/hqdefault.jpg' },
-  { id:'ss46', title:'Butter',                 artistName:'BTS',         duration:164, coverUrl:'https://i.ytimg.com/vi/WMweEpGlu_U/hqdefault.jpg' },
+  { id:'ss45', title:'Dynamite',         artistName:'BTS', duration:199,
+    coverUrl:'https://coverartarchive.org/release/3c3c3c3c-3c3c-3c3c-3c3c-3c3c3c3c3c3c/front-250' },
+  { id:'ss46', title:'Butter',           artistName:'BTS', duration:164,
+    coverUrl:'https://coverartarchive.org/release/3c3c3c3c-3c3c-3c3c-3c3c-3c3c3c3c3c3c/front-250' },
 ];
 
-// ─── Feedback messages pool ───────────────────────────────────────────────────
+// Artist color map — used as gradient fallback when cover fails
+export const ARTIST_COLORS: Record<string, string> = {
+  'עומר אדם':       '#7c3aed',
+  'חנן בן ארי':     '#0ea5e9',
+  'מושיר כהן':      '#f59e0b',
+  'שלמה ארצי':      '#10b981',
+  'טונה':           '#ec4899',
+  'פאר טסי':        '#f97316',
+  'אייל גולן':      '#dc2626',
+  'נועה קירל':      '#a855f7',
+  'Static & Ben El':'#14b8a6',
+  'Coldplay':        '#3b82f6',
+  'The Weeknd':      '#1c1917',
+  'Drake':           '#92400e',
+  'Taylor Swift':    '#be185d',
+  'Eminem':          '#374151',
+  'Ed Sheeran':      '#d97706',
+  'Imagine Dragons': '#7c3aed',
+  'Post Malone':     '#6b21a8',
+  'BTS':             '#7dd3fc',
+};
+
+// ─── Feedback messages — טבעי, בלי קריאות ───────────────────────────────────
 
 const FEEDBACK_MESSAGES = [
-  (song: string, artist: string) => `האפליקציה ממש סבבה! אבל שמתי לב שהכתוביות של "${song}" של ${artist} לא מסונכרנות טוב, אפשר לתקן?`,
-  (_s: string, _a: string) => `האפליקציה מדהימה, תודה רבה! רק הייתי שמח אם הייתה אפשרות לשמור שירים להאזנה אופליין 🙏`,
-  (song: string, artist: string) => `יש בעיה בטעינה של "${song}" — לפעמים נתקע באמצע. בר שאר השירים עובדים מעולה!`,
-  (_s: string, _a: string) => `פשוט מוזיקה הכי טובה! תמשיכו כך 🔥`,
-  (song: string, artist: string) => `"${song}" של ${artist} לא מתנגן אצלי, יכול להיות שהלינק לא תקין?`,
-  (_s: string, _a: string) => `אני משתמש כבר חודש ולא עוצר! הממשק נקי ונוח, כל הכבוד לצוות`,
-  (song: string, _a: string) => `שאלה קטנה — האם הולכים להוסיף את "${song}" בגרסת הלייב? מחפש את זה`,
-  (_s: string, _a: string) => `נהדר! אבל באפליקציה הסלולרית לפעמים הנגן נסגר לבד ברקע`,
-  (song: string, artist: string) => `אהבתי מאוד את "${song}"! האם יש אפשרות להוסיף עוד שירים של ${artist}?`,
-  (_s: string, _a: string) => `כל שמירה לפלייליסט עובדת פצצה. רק חסרה אפשרות לשתף פלייליסט עם חבר`,
-  (_s: string, _a: string) => `האיקולייזר ממש שדרג לי את החוויה, תודה!`,
-  (song: string, _a: string) => `יש תרגום שגוי בכתוביות של "${song}" — המילה השלישית בפזמון לא נכונה`,
-  (_s: string, _a: string) => `אפליקציה מושלמת לנסיעות! קצת קשה למצוא שירים ישנים, אולי להוסיף סינון לפי שנה?`,
-  (_s: string, _a: string) => `10/10 ממש! הייתי שמח לראות עוד מוזיקת עולם — ריג\'בי, פלמנקו וכאלה`,
-  (song: string, artist: string) => `תודה על הפלטפורמה! הכנסתי את "${song}" של ${artist} לפלייליסט ועבד חלק`,
+  (song: string, artist: string) => `הכתוביות של "${song}" של ${artist} לא מסונכרנות טוב, אפשר לתקן?`,
+  (_s: string, _a: string) => `האפליקציה מדהימה. רק הייתי שמח לשמור שירים להאזנה אופליין`,
+  (song: string, _a: string) => `"${song}" לפעמים נתקע באמצע, שאר השירים עובדים מעולה`,
+  (_s: string, _a: string) => `פשוט מוזיקה הכי טובה, תמשיכו כך`,
+  (song: string, artist: string) => `"${song}" של ${artist} לא מתנגן אצלי, הלינק תקין?`,
+  (_s: string, _a: string) => `משתמש חודש ולא עוצר. הממשק נקי ונוח, כל הכבוד`,
+  (_s: string, _a: string) => `באפליקציה הסלולרית הנגן נסגר לבד ברקע לפעמים`,
+  (song: string, artist: string) => `אהבתי מאוד את "${song}", אפשר להוסיף עוד שירים של ${artist}?`,
+  (_s: string, _a: string) => `שמירה לפלייליסט עובדת פצצה. חסרה רק אפשרות לשתף פלייליסט עם חבר`,
+  (_s: string, _a: string) => `האיקולייזר שדרג לי את החוויה, תודה`,
+  (song: string, _a: string) => `יש תרגום שגוי בכתוביות של "${song}", המילה השלישית בפזמון לא נכונה`,
+  (_s: string, _a: string) => `אפליקציה מושלמת לנסיעות. קצת קשה למצוא שירים ישנים, אולי סינון לפי שנה?`,
+  (_s: string, _a: string) => `10 מתוך 10. הייתי שמח לראות עוד מוזיקת עולם`,
+  (song: string, artist: string) => `הכנסתי את "${song}" של ${artist} לפלייליסט ועבד חלק`,
+  (_s: string, _a: string) => `האפליקציה עובדת מצוין, רק שאלה אחת — אפשר להוסיף מצב שינה?`,
+  (_s: string, _a: string) => `עיצוב מעולה. הכפתורים ברורים ומהירים`,
+  (song: string, _a: string) => `"${song}" מעולה, מחפש עוד שירים בסגנון הזה`,
+  (_s: string, _a: string) => `האפליקציה נפתחת מהר ונוחה לשימוש`,
 ];
 
 // ─── Seeded RNG ───────────────────────────────────────────────────────────────
@@ -202,7 +276,7 @@ function buildUserBase(id: number) {
   return { id: `sim_${id}`, displayName: `${first} ${last}`, email, emailMasked: maskEmail(email), avatarSeed: Math.floor(rand() * 100) };
 }
 
-const USER_BASE = Array.from({ length: 400 }, (_, i) => buildUserBase(i));
+const USER_BASE = Array.from({ length: 1200 }, (_, i) => buildUserBase(i));
 
 let _songState = 0xbeef1234;
 function songRand(): number {
@@ -221,12 +295,11 @@ function assignSongs(count: number): OnlineUser[] {
   });
 }
 
-// ─── Simulated feedback generator ────────────────────────────────────────────
+// ─── Simulated feedback ───────────────────────────────────────────────────────
 
 function generateFeedback(count: number): SimFeedback[] {
   const items: SimFeedback[] = [];
   const now = Date.now();
-  // spread over last 6 hours
   for (let i = 0; i < count; i++) {
     const rand = seededRand(i * 99991 + 13);
     const first = FIRST_NAMES[Math.floor(rand() * FIRST_NAMES.length)];
@@ -236,7 +309,7 @@ function generateFeedback(count: number): SimFeedback[] {
     const email  = `${transliterate(first)}.${transliterate(last)}${num}@${domain}`.toLowerCase();
     const song   = SIM_SONGS[Math.floor(rand() * SIM_SONGS.length)];
     const msgFn  = FEEDBACK_MESSAGES[Math.floor(rand() * FEEDBACK_MESSAGES.length)];
-    const minsAgo = Math.floor(rand() * 360); // 0-6 hours ago
+    const minsAgo = Math.floor(rand() * 360);
     items.push({
       id: `fb_${i}`,
       userName: `${first} ${last}`,
@@ -245,46 +318,67 @@ function generateFeedback(count: number): SimFeedback[] {
       createdAt: new Date(now - minsAgo * 60_000).toISOString(),
     });
   }
-  // sort newest first
   return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-// Pre-generate 18 feedback items
-const SIM_FEEDBACK_POOL = generateFeedback(18);
+// ─── Time-based count — base at 1005, gradual rise every 30 min ──────────────
 
-// ─── Time-based count ─────────────────────────────────────────────────────────
+const BASE_COUNT = 1005;
 
 interface HourSlot { min: number; max: number; }
 function getHourSlot(h: number): HourSlot {
-  if (h < 5)  return { min:5,   max:18  };
-  if (h < 7)  return { min:15,  max:60  };
-  if (h < 9)  return { min:80,  max:250 };
-  if (h < 12) return { min:60,  max:180 };
-  if (h < 14) return { min:40,  max:90  };
-  if (h < 17) return { min:50,  max:120 };
-  if (h < 20) return { min:90,  max:220 };
-  if (h < 23) return { min:70,  max:160 };
-  return { min:20, max:55 };
+  // All slots shifted up to be around 1005 base
+  if (h < 5)  return { min: 820,  max: 920  };
+  if (h < 7)  return { min: 900,  max: 1050 };
+  if (h < 9)  return { min: 1050, max: 1250 };
+  if (h < 12) return { min: 980,  max: 1180 };
+  if (h < 14) return { min: 930,  max: 1080 };
+  if (h < 17) return { min: 970,  max: 1150 };
+  if (h < 20) return { min: 1080, max: 1300 };
+  if (h < 23) return { min: 1000, max: 1200 };
+  return { min: 870, max: 990 };
+}
+
+// Every 30 minutes: random increment of 1–5 listeners (gradual organic growth)
+function getGrowthBonus(): number {
+  const halfHour = Math.floor(Date.now() / 1_800_000); // changes every 30 min
+  const r = seededRand(halfHour * 7919 + 31337);
+  // 1–5 steps, each 1–3 listeners
+  const steps = 1 + Math.floor(r() * 4);
+  let bonus = 0;
+  for (let i = 0; i < steps; i++) bonus += 1 + Math.floor(r() * 3);
+  return bonus;
+}
+
+let _noiseState2 = (Date.now() ^ 0xcafebabe) >>> 0;
+function noiseRand2(): number {
+  _noiseState2 = (Math.imul(_noiseState2, 1664525) + 1013904223) >>> 0;
+  return _noiseState2 / 0x100000000;
 }
 
 function gaussianNoise(std: number): number {
-  const u = (noiseRand() + noiseRand() + noiseRand()) / 3;
+  const u = (noiseRand2() + noiseRand2() + noiseRand2()) / 3;
   return (u - 0.5) * 2 * std;
 }
 
 function computeNext(current: number): number {
   const slot  = getHourSlot(new Date().getHours());
-  const mid   = (slot.min + slot.max) / 2;
-  const range = slot.max - slot.min;
-  const pull  = (mid - current) * 0.08;
-  const noise = gaussianNoise(range * 0.10);
-  const spike = noiseRand() < 0.05 ? (noiseRand() * range * 0.12) * (noiseRand() > 0.5 ? 1 : -1) : 0;
-  return Math.max(slot.min, Math.min(slot.max, Math.round(current + pull + noise + spike)));
+  const bonus = getGrowthBonus();
+  const target = Math.min(slot.max + bonus, slot.max);
+  const mid   = (slot.min + target) / 2;
+  const range = target - slot.min;
+  const pull  = (mid - current) * 0.06;
+  const noise = gaussianNoise(range * 0.04); // תנודה קטנה — טבעי
+  const spike = noiseRand2() < 0.04
+    ? (noiseRand2() * range * 0.08) * (noiseRand2() > 0.5 ? 1 : -1)
+    : 0;
+  return Math.max(slot.min, Math.min(slot.max + bonus, Math.round(current + pull + noise + spike)));
 }
 
 function initialCount(): number {
-  const slot = getHourSlot(new Date().getHours());
-  return Math.round((slot.min + slot.max) / 2 + gaussianNoise((slot.max - slot.min) * 0.15));
+  const slot  = getHourSlot(new Date().getHours());
+  const bonus = getGrowthBonus();
+  return Math.round((slot.min + slot.max) / 2 + bonus + gaussianNoise((slot.max - slot.min) * 0.10));
 }
 
 // ─── Live position helper ─────────────────────────────────────────────────────
@@ -294,12 +388,38 @@ export function getLivePosition(user: OnlineUser): number {
   return (user.songOffset + elapsed) % user.song.duration;
 }
 
+// ─── Persistent reply store (localStorage) ────────────────────────────────────
+
+const REPLIES_KEY = 'sim_feedback_replies';
+
+function loadReplies(): Record<string, { reply: string; repliedAt: string }> {
+  try {
+    return JSON.parse(localStorage.getItem(REPLIES_KEY) || '{}');
+  } catch { return {}; }
+}
+
+function saveReply(id: string, reply: string) {
+  const all = loadReplies();
+  all[id] = { reply, repliedAt: new Date().toISOString() };
+  localStorage.setItem(REPLIES_KEY, JSON.stringify(all));
+}
+
 // ─── The hook ─────────────────────────────────────────────────────────────────
 
+const SIM_FEEDBACK_BASE = generateFeedback(18);
+
 export function useOnlineUsers(): OnlineUsersState {
-  const [count,    setCount]   = useState<number>(initialCount);
-  const [users,    setUsers]   = useState<OnlineUser[]>([]);
+  const [count,    setCount]    = useState<number>(initialCount);
+  const [users,    setUsers]    = useState<OnlineUser[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [simFeedback, setSimFeedback] = useState<SimFeedback[]>(() => {
+    const replies = loadReplies();
+    return SIM_FEEDBACK_BASE.map(fb => ({
+      ...fb,
+      adminReply: replies[fb.id]?.reply,
+      repliedAt:  replies[fb.id]?.repliedAt,
+    }));
+  });
   const countRef = useRef(count);
 
   useEffect(() => { countRef.current = count; }, [count]);
@@ -308,7 +428,7 @@ export function useOnlineUsers(): OnlineUsersState {
     setUsers(assignSongs(countRef.current));
     setIsLoaded(true);
 
-    // Count tick: every 3–6 s
+    // Count tick: every 3–6 s (small drift only)
     let countTimer: ReturnType<typeof setTimeout>;
     const tickCount = () => {
       const next = computeNext(countRef.current);
@@ -319,7 +439,7 @@ export function useOnlineUsers(): OnlineUsersState {
         if (next > prev.length)  return [...prev, ...assignSongs(next).slice(prev.length)];
         return prev.slice(0, next);
       });
-      countTimer = setTimeout(tickCount, 3_000 + Math.floor(noiseRand() * 3_000));
+      countTimer = setTimeout(tickCount, 3_000 + Math.floor(noiseRand2() * 3_000));
     };
     countTimer = setTimeout(tickCount, 4_000);
 
@@ -328,17 +448,26 @@ export function useOnlineUsers(): OnlineUsersState {
     const tickSongs = () => {
       const now = Date.now();
       setUsers(prev => prev.map(u => {
-        if (noiseRand() > 0.15) return u;
+        if (noiseRand2() > 0.15) return u;
         const newSong   = SIM_SONGS[Math.floor(songRand() * SIM_SONGS.length)];
         const newOffset = Math.floor(newSong.duration * 0.05);
         return { ...u, song: newSong, songOffset: newOffset, songStartedAt: now };
       }));
-      songTimer = setTimeout(tickSongs, 28_000 + Math.floor(noiseRand() * 10_000));
+      songTimer = setTimeout(tickSongs, 28_000 + Math.floor(noiseRand2() * 10_000));
     };
     songTimer = setTimeout(tickSongs, 30_000);
 
     return () => { clearTimeout(countTimer); clearTimeout(songTimer); };
   }, []);
 
-  return { count, users, isLoaded, simFeedback: SIM_FEEDBACK_POOL };
+  const replyToFeedback = (id: string, reply: string) => {
+    saveReply(id, reply);
+    setSimFeedback(prev => prev.map(fb =>
+      fb.id === id
+        ? { ...fb, adminReply: reply, repliedAt: new Date().toISOString() }
+        : fb
+    ));
+  };
+
+  return { count, users, isLoaded, simFeedback, replyToFeedback };
 }

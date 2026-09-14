@@ -1,19 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Shield, Users, Music, Disc3, Radio, Server, AlertTriangle, RefreshCw, Bell, Plus, Trash2, MessageSquare, Wifi, Play } from 'lucide-react';
+import { Shield, Users, Music, Disc3, Radio, Server, AlertTriangle, RefreshCw, Bell, Plus, Trash2, MessageSquare, Wifi, Play, CornerDownLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { AdminStats, ProviderConfig, PlaybackLog, AppUpdate, UserFeedback, Song } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useOnlineUsers, getLivePosition, OnlineUser, SIM_SONGS } from '../hooks/useOnlineUsers';
+import { useOnlineUsers, getLivePosition, OnlineUser, SIM_SONGS, ARTIST_COLORS } from '../hooks/useOnlineUsers';
 import { usePlayer } from '../contexts/PlayerContext';
 
 export const AdminDashboard: React.FC = () => {
   const { token } = useAuth();
   const { t } = useLanguage();
-  const { count: onlineCount, users: onlineUsers, isLoaded: onlineLoaded, simFeedback } = useOnlineUsers();
+  const { count: onlineCount, users: onlineUsers, isLoaded: onlineLoaded, simFeedback, replyToFeedback } = useOnlineUsers();
   const { playSong, seek } = usePlayer();
 
   // Tick every second so progress bars update in real-time
   const [, setTick] = useState(0);
+  // Reply box state: feedbackId → draft text
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [replyOpen,   setReplyOpen]   = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     const id = setInterval(() => setTick(n => n + 1), 1000);
     return () => clearInterval(id);
@@ -46,8 +50,21 @@ export const AdminDashboard: React.FC = () => {
     const song = simSongToSong(user.song);
     const pos  = getLivePosition(user);
     playSong(song);
-    // seek after a short delay so the player has time to initialise
     setTimeout(() => seek(Math.floor(pos)), 400);
+  }
+
+  /** Colored initials avatar as fallback when cover image fails */
+  function SongCover({ song, size = 7 }: { song: typeof SIM_SONGS[0]; size?: number }) {
+    const color = ARTIST_COLORS[song.artistName] ?? '#6b7280';
+    const initial = (song.artistName[0] ?? '?');
+    return (
+      <div
+        className={`w-${size} h-${size} rounded-md flex items-center justify-center text-white font-bold text-[10px] shrink-0`}
+        style={{ background: `linear-gradient(135deg, ${color}cc, ${color}66)` }}
+      >
+        {initial}
+      </div>
+    );
   }
 
   function formatTime(s: number): string {
@@ -260,7 +277,7 @@ export const AdminDashboard: React.FC = () => {
         </div>}
       </section>
 
-      {/* User Feedback — real + simulated */}
+      {/* User Feedback — real + simulated + reply */}
       <section className="space-y-4 rounded-2xl border border-emerald-500/20 bg-[#13151d] p-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-emerald-400">
@@ -269,7 +286,7 @@ export const AdminDashboard: React.FC = () => {
               <h2 className="text-base font-bold text-white">
                 פידבק מהמשתמשים ({feedback.length + simFeedback.length})
               </h2>
-              <p className="text-xs text-zinc-500">כל ההצעות וההודעות שנשלחו מטופס הפידבק בהגדרות.</p>
+              <p className="text-xs text-zinc-500">לחץ "השב" כדי לשלוח תגובה שתוצג למשתמש בהגדרות.</p>
             </div>
           </div>
           <button onClick={fetchAdminData} className="rounded-lg p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white" title="רענן פידבק"><RefreshCw className="h-4 w-4" /></button>
@@ -285,14 +302,50 @@ export const AdminDashboard: React.FC = () => {
               <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{item.message}</p>
             </article>
           ))}
-          {/* Simulated feedback */}
+          {/* Simulated feedback with reply */}
           {simFeedback.map((item) => (
-            <article key={item.id} className="rounded-xl border border-white/5 bg-white/[.02] p-4">
+            <article key={item.id} className="rounded-xl border border-white/5 bg-white/[.02] p-4 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div><p className="text-sm font-semibold text-white">{item.userName}</p><p className="text-[11px] text-zinc-500">{item.userEmail}</p></div>
                 <time className="text-[11px] text-zinc-500">{new Date(item.createdAt).toLocaleString('he-IL')}</time>
               </div>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{item.message}</p>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-300">{item.message}</p>
+              {item.adminReply && (
+                <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2.5">
+                  <p className="text-[11px] font-semibold text-blue-400 mb-1">תשובת המנהל · {item.repliedAt ? new Date(item.repliedAt).toLocaleString('he-IL') : ''}</p>
+                  <p className="text-sm text-zinc-200">{item.adminReply}</p>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setReplyOpen(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                  className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-white transition"
+                >
+                  {replyOpen[item.id]
+                    ? <><ChevronUp className="w-3 h-3" /> סגור</>
+                    : <><CornerDownLeft className="w-3 h-3" /> {item.adminReply ? 'ערוך תשובה' : 'השב'}</>}
+                </button>
+              </div>
+              {replyOpen[item.id] && (
+                <div className="flex gap-2">
+                  <textarea
+                    value={replyDrafts[item.id] ?? item.adminReply ?? ''}
+                    onChange={e => setReplyDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                    placeholder="כתוב תשובה למשתמש..."
+                    rows={2}
+                    className="flex-1 rounded-xl border border-white/10 bg-[#0d0f15] px-3 py-2 text-sm text-white outline-none focus:border-blue-500 resize-none"
+                  />
+                  <button
+                    onClick={() => {
+                      const reply = replyDrafts[item.id] ?? '';
+                      if (!reply.trim()) return;
+                      replyToFeedback(item.id, reply.trim());
+                      setReplyOpen(prev => ({ ...prev, [item.id]: false }));
+                    }}
+                    className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition self-end"
+                  >שלח</button>
+                </div>
+              )}
             </article>
           ))}
           {feedback.length === 0 && simFeedback.length === 0 && (
@@ -415,12 +468,16 @@ export const AdminDashboard: React.FC = () => {
                             className="flex items-center gap-2 group text-start"
                             title={`נגן מ-${formatTime(getLivePosition(u))}`}
                           >
-                            <img
-                              src={u.song.coverUrl}
-                              alt=""
-                              className="w-7 h-7 rounded-md object-cover bg-zinc-800 shrink-0"
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                            />
+                            {/* Cover with colorful fallback */}
+                            <div className="relative w-7 h-7 shrink-0">
+                              <img
+                                src={u.song.coverUrl}
+                                alt=""
+                                className="w-7 h-7 rounded-md object-cover bg-zinc-800 absolute inset-0"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
+                              <SongCover song={u.song} size={7} />
+                            </div>
                             <div className="min-w-0">
                               <p className="truncate max-w-[130px] font-semibold text-white group-hover:text-emerald-400 transition-colors flex items-center gap-1">
                                 <Play className="w-2.5 h-2.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
