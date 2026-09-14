@@ -12,6 +12,7 @@ interface ConfettiPiece {
   size: number;
   drift: number;
   fallDistance: number;
+  riseDistance: number;
 }
 
 const getCaretPosition = (element: HTMLInputElement | HTMLTextAreaElement) => {
@@ -36,37 +37,36 @@ const getCaretPosition = (element: HTMLInputElement | HTMLTextAreaElement) => {
 export const EmojiConfetti: React.FC = () => {
   const { confettiEnabled } = useTheme();
   const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
-  const burstActive = useRef(false);
+  const nextPieceId = useRef(0);
 
   useEffect(() => {
     if (!confettiEnabled) return;
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target || !['INPUT', 'TEXTAREA'].includes(target.tagName) || event.key.length !== 1) return;
-      if (burstActive.current) return;
-      burstActive.current = true;
       const now = Date.now();
       const caret = getCaretPosition(target as HTMLInputElement | HTMLTextAreaElement);
       const fallDistance = Math.max(0, window.innerHeight - caret.top + 180);
-      const burst = Array.from({ length: 14 }, (_, index) => ({
-        id: now + index,
+      const riseDistance = Math.max(180, caret.top + 100);
+      const burst = Array.from({ length: 5 }, (_, index) => ({
+        id: now * 100 + nextPieceId.current++,
         emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
-        left: caret.left + (Math.random() - 0.5) * 24,
-        top: caret.top + (Math.random() - 0.5) * 14,
-        delay: Math.random() * 220,
+        left: caret.left + (Math.random() - 0.5) * 18,
+        top: caret.top + (Math.random() - 0.5) * 10,
+        delay: Math.random() * 160,
         size: 14 + Math.random() * 10,
         drift: -60 + Math.random() * 120,
         fallDistance,
+        riseDistance,
       }));
-      setPieces((current) => [...current, ...burst].slice(-32));
+      setPieces((current) => [...current, ...burst].slice(-64));
       window.setTimeout(() => {
         setPieces((current) => current.filter((piece) => !burst.some((item) => item.id === piece.id)));
-        burstActive.current = false;
-      }, 8600);
+      }, 9000);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [confettiEnabled]);
 
-  return <div className="emoji-confetti-layer" aria-hidden="true">{pieces.map((piece) => <span key={piece.id} className="emoji-confetti-piece" style={{ left: `${piece.left}px`, top: `${piece.top}px`, animationDelay: `${piece.delay}ms`, fontSize: `${piece.size}px`, ['--drift' as string]: `${piece.drift}px`, ['--fall-distance' as string]: `${piece.fallDistance}px` }}>{piece.emoji}</span>)}</div>;
+  return <div className="emoji-confetti-layer" aria-hidden="true">{pieces.map((piece) => <span key={piece.id} className="emoji-confetti-piece" style={{ left: `${piece.left}px`, top: `${piece.top}px`, animationDelay: `${piece.delay}ms`, fontSize: `${piece.size}px`, ['--drift' as string]: `${piece.drift}px`, ['--fall-distance' as string]: `${piece.fallDistance}px`, ['--rise-distance' as string]: `${piece.riseDistance}px` }}>{piece.emoji}</span>)}</div>;
 };
