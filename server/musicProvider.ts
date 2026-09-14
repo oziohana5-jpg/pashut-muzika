@@ -253,7 +253,7 @@ async function fetchOnlineCatalog(query: string, filter?: string): Promise<{ son
     const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     const term = encodeURIComponent(query);
-    const searchUrl = `https://itunes.apple.com/search?term=${term}&entity=song&limit=200`;
+    const searchUrl = `https://itunes.apple.com/search?term=${term}&entity=song&limit=80`;
 
     const res = await fetch(searchUrl, {
       signal: controller.signal,
@@ -586,11 +586,11 @@ export class LicensedCatalogProvider implements MusicProvider {
       albums: matchedAlbums,
       playlists: matchedPlaylists,
     };
-    const onlineResults = await fetchOnlineCatalog(query, filter);
-    const shouldSearchYouTube =
-      filter === 'songs' &&
-      onlineResults.songs.length === 0;
-    const ytSongs = shouldSearchYouTube ? await searchYouTubeTracks(query) : [];
+    const onlinePromise = fetchOnlineCatalog(query, filter);
+    const youtubePromise = filter === 'songs'
+      ? searchYouTubeTracks(query)
+      : Promise.resolve([] as Song[]);
+    const [onlineResults, ytSongs] = await Promise.all([onlinePromise, youtubePromise]);
 
     // Merge without duplicate IDs
     const songMap = new Map<string, Song>();
