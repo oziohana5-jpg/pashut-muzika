@@ -33,8 +33,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import { themes, useTheme } from '../contexts/ThemeContext';
+import { ActiveTab } from '../types';
 
-export const SettingsView: React.FC = () => {
+interface SettingsViewProps {
+  onNavigateTab?: (tab: ActiveTab) => void;
+}
+
+export const SettingsView: React.FC<SettingsViewProps> = ({ onNavigateTab }) => {
   const { user, token, logout, updateProfile, changePassword, deleteAccount, openAuthModal } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { audioQuality, setAudioQuality } = usePlayer();
@@ -155,6 +160,25 @@ export const SettingsView: React.FC = () => {
       <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
         {t('settingsTitle')}
       </h1>
+
+      {user?.role === 'admin' && (
+        <section className="rounded-3xl border border-amber-400/20 bg-gradient-to-br from-amber-500/10 to-transparent p-5 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300">Admin Access</p>
+              <h2 className="mt-1 text-base font-black text-white">ממשק אדמין</h2>
+              <p className="mt-1 text-xs leading-5 text-zinc-400">ניהול משתמשים, ספקי שמע, עדכונים, פידבק ושגיאות מערכת.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('admin')}
+              className="inline-flex items-center justify-center rounded-xl border border-amber-300/30 bg-amber-400/15 px-4 py-3 text-xs font-bold text-amber-200 transition hover:bg-amber-400/25"
+            >
+              פתח ממשק אדמין
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Visual identity */}
       <section className="theme-studio relative overflow-hidden rounded-3xl border border-white/10 p-5 sm:p-6 space-y-5">

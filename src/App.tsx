@@ -224,7 +224,7 @@ const MainApp: React.FC = () => {
           )}
 
           {activeView.type === 'tab' && activeView.tab === 'settings' && (
-            <SettingsView />
+            <SettingsView onNavigateTab={handleNavigateTab} />
           )}
 
           {activeView.type === 'tab' && activeView.tab === 'admin' && (
