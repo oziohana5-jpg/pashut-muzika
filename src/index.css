@@ -28,8 +28,8 @@
 [class~="bg-blue-600"] { background-color: var(--app-accent-soft) !important; }
 [class~="border-blue-500"] { border-color: color-mix(in srgb, var(--app-accent) 70%, transparent) !important; }
 .emoji-confetti-layer { position: fixed; inset: 0; z-index: 100; pointer-events: none; overflow: hidden; }
-.emoji-confetti-piece { position: absolute; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .35)); animation: emoji-confetti-fall 2.8s cubic-bezier(.2, .7, .35, 1) forwards; }
-@keyframes emoji-confetti-fall { 0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(.55); opacity: 0; } 8% { opacity: 1; } 26% { transform: translate3d(calc(var(--drift) * .28), calc(var(--rise) * -1), 0) rotate(120deg) scale(1.08); opacity: 1; } 58% { transform: translate3d(calc(var(--drift) * .72), 48vh, 0) rotate(270deg) scale(1); opacity: .95; } 92% { opacity: .9; } 100% { transform: translate3d(var(--drift), 105vh, 0) rotate(520deg) scale(.82); opacity: 0; } }
+.emoji-confetti-piece { position: absolute; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .35)); animation: emoji-confetti-fall 3.6s linear forwards; }
+@keyframes emoji-confetti-fall { 0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(.55); opacity: 0; } 8% { opacity: 1; } 100% { transform: translate3d(var(--drift), 105vh, 0) rotate(520deg) scale(.88); opacity: 0; } }
 
 /* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {
