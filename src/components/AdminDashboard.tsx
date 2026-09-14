@@ -1,14 +1,60 @@
-import React, { useEffect, useState } from 'react';
-import { Shield, Users, Music, Disc3, Radio, Server, AlertTriangle, RefreshCw, Bell, Plus, Trash2, MessageSquare, Wifi } from 'lucide-react';
-import { AdminStats, ProviderConfig, PlaybackLog, AppUpdate, UserFeedback } from '../types';
+import React, { useEffect, useRef, useState } from 'react';
+import { Shield, Users, Music, Disc3, Radio, Server, AlertTriangle, RefreshCw, Bell, Plus, Trash2, MessageSquare, Wifi, Play } from 'lucide-react';
+import { AdminStats, ProviderConfig, PlaybackLog, AppUpdate, UserFeedback, Song } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useOnlineUsers } from '../hooks/useOnlineUsers';
+import { useOnlineUsers, getLivePosition, OnlineUser, SIM_SONGS } from '../hooks/useOnlineUsers';
+import { usePlayer } from '../contexts/PlayerContext';
 
 export const AdminDashboard: React.FC = () => {
   const { token } = useAuth();
   const { t } = useLanguage();
   const { count: onlineCount, users: onlineUsers, isLoaded: onlineLoaded } = useOnlineUsers();
+  const { playSong, seek } = usePlayer();
+
+  // Tick every second so progress bars update in real-time
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(n => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  /** Convert a SimSong to a minimal Song object the player can accept */
+  function simSongToSong(simSong: typeof SIM_SONGS[0]): Song {
+    return {
+      id: simSong.id,
+      title: simSong.title,
+      artistId: simSong.id,
+      artistName: simSong.artistName,
+      albumId: simSong.id,
+      albumName: '',
+      coverUrl: simSong.coverUrl,
+      duration: simSong.duration,
+      releaseDate: '',
+      genre: 'pop',
+      streamUrl: simSong.streamUrl ?? '',
+      provider: 'sim',
+      audioFormat: 'mp3',
+      bitrate: 128,
+      plays: 0,
+      isFullLength: true,
+      licenseInfo: '',
+    } as Song;
+  }
+
+  function handlePlayUserSong(user: OnlineUser) {
+    const song = simSongToSong(user.song);
+    const pos  = getLivePosition(user);
+    playSong(song);
+    // seek after a short delay so the player has time to initialise
+    setTimeout(() => seek(Math.floor(pos)), 400);
+  }
+
+  function formatTime(s: number): string {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
 
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
@@ -295,16 +341,14 @@ export const AdminDashboard: React.FC = () => {
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 מאזינים פעילים עכשיו
-                {/* Pulsing live dot */}
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
                   <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
                 </span>
               </h2>
-              <p className="text-xs text-zinc-500">נתון חי • מתעדכן כל 20–35 שניות</p>
+              <p className="text-xs text-zinc-500">נתון חי • מתעדכן בזמן אמת</p>
             </div>
           </div>
-          {/* Big count pill */}
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
             <Radio className="w-4 h-4 text-emerald-400" />
             <span className="text-2xl font-black text-emerald-300 tabular-nums">
@@ -313,48 +357,98 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* User avatars grid */}
         {onlineLoaded && onlineUsers.length > 0 && (
           <div className="space-y-2">
             <p className="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold">
-              דוגמת משתמשים מחוברים ({Math.min(onlineUsers.length, 20)} מתוך {onlineCount})
+              {Math.min(onlineUsers.length, 25)} מתוך {onlineCount} מאזינים — לחץ על שיר כדי להאזין מאותה דקה
             </p>
             <div className="overflow-x-auto">
-              <table className="w-full text-start text-xs text-zinc-300">
-                <thead className="text-zinc-500 uppercase border-b border-white/5">
+              <table className="w-full text-xs text-zinc-300">
+                <thead className="text-zinc-500 border-b border-white/5">
                   <tr>
                     <th className="py-2.5 px-3 text-start">שם</th>
                     <th className="py-2.5 px-3 text-start">אימייל</th>
+                    <th className="py-2.5 px-3 text-start">שיר נוכחי</th>
+                    <th className="py-2.5 px-3 text-start w-32">התקדמות</th>
                     <th className="py-2.5 px-3 text-start">סטטוס</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {onlineUsers.slice(0, 20).map((u) => (
-                    <tr key={u.id} className="hover:bg-white/[0.02]">
-                      <td className="py-2.5 px-3 font-medium text-white">
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${u.avatarSeed}`}
-                            alt=""
-                            className="w-6 h-6 rounded-full bg-zinc-800 shrink-0"
-                          />
-                          <span className="truncate max-w-[140px]">{u.displayName}</span>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-3 text-zinc-400 font-mono text-[11px]">{u.email}</td>
-                      <td className="py-2.5 px-3">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400">
-                          מאזין ●
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {onlineUsers.slice(0, 25).map((u) => {
+                    const pos  = getLivePosition(u);
+                    const pct  = Math.min(100, (pos / u.song.duration) * 100);
+                    return (
+                      <tr key={u.id} className="hover:bg-white/[0.03] transition-colors">
+                        {/* Name + avatar */}
+                        <td className="py-2.5 px-3 font-medium text-white">
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${u.avatarSeed}`}
+                              alt=""
+                              className="w-6 h-6 rounded-full bg-zinc-800 shrink-0"
+                            />
+                            <span className="truncate max-w-[110px]">{u.displayName}</span>
+                          </div>
+                        </td>
+
+                        {/* Masked email */}
+                        <td className="py-2.5 px-3 text-zinc-500 font-mono text-[11px]">
+                          {u.emailMasked}
+                        </td>
+
+                        {/* Song — clickable */}
+                        <td className="py-2.5 px-3">
+                          <button
+                            onClick={() => handlePlayUserSong(u)}
+                            className="flex items-center gap-2 group text-start"
+                            title={`נגן מ-${formatTime(getLivePosition(u))}`}
+                          >
+                            <img
+                              src={u.song.coverUrl}
+                              alt=""
+                              className="w-7 h-7 rounded-md object-cover bg-zinc-800 shrink-0"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate max-w-[130px] font-semibold text-white group-hover:text-emerald-400 transition-colors flex items-center gap-1">
+                                <Play className="w-2.5 h-2.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                {u.song.title}
+                              </p>
+                              <p className="truncate max-w-[130px] text-zinc-500">{u.song.artistName}</p>
+                            </div>
+                          </button>
+                        </td>
+
+                        {/* Progress bar */}
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1 rounded-full bg-white/10 overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="text-zinc-500 tabular-nums text-[10px] shrink-0">
+                              {formatTime(pos)}/{formatTime(u.song.duration)}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-2.5 px-3">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                            ● מחובר
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-            {onlineCount > 20 && (
+            {onlineCount > 25 && (
               <p className="text-[11px] text-zinc-600 text-center pt-1">
-                + {(onlineCount - 20).toLocaleString('he-IL')} מאזינים נוספים...
+                + {(onlineCount - 25).toLocaleString('he-IL')} מאזינים נוספים...
               </p>
             )}
           </div>
