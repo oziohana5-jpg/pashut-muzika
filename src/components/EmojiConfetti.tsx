@@ -13,6 +13,25 @@ interface ConfettiPiece {
   drift: number;
 }
 
+const getCaretPosition = (element: HTMLInputElement | HTMLTextAreaElement) => {
+  const bounds = element.getBoundingClientRect();
+  const styles = window.getComputedStyle(element);
+  const valueBeforeCaret = element.value.slice(0, element.selectionStart ?? element.value.length);
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) return { left: bounds.left + bounds.width / 2, top: bounds.top + bounds.height / 2 };
+
+  context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+  const textWidth = context.measureText(valueBeforeCaret).width;
+  const paddingStart = parseFloat(styles.paddingInlineStart) || 0;
+  const paddingEnd = parseFloat(styles.paddingInlineEnd) || 0;
+  const isRtl = styles.direction === 'rtl';
+  const left = isRtl
+    ? bounds.right - paddingEnd - textWidth + element.scrollLeft
+    : bounds.left + paddingStart + textWidth - element.scrollLeft;
+  return { left: Math.max(bounds.left + 8, Math.min(bounds.right - 8, left)), top: bounds.top + bounds.height * 0.42 };
+};
+
 export const EmojiConfetti: React.FC = () => {
   const { confettiEnabled } = useTheme();
   const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
@@ -26,18 +45,18 @@ export const EmojiConfetti: React.FC = () => {
       const now = Date.now();
       if (now - lastBurst < 550) return;
       lastBurst = now;
-      const bounds = target.getBoundingClientRect();
+      const caret = getCaretPosition(target as HTMLInputElement | HTMLTextAreaElement);
       const burst = Array.from({ length: 8 }, (_, index) => ({
         id: now + index,
         emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
-        left: bounds.left + bounds.width * (0.45 + Math.random() * 0.1),
-        top: bounds.top + bounds.height * (0.3 + Math.random() * 0.15),
+        left: caret.left + (Math.random() - 0.5) * 18,
+        top: caret.top + (Math.random() - 0.5) * 10,
         delay: Math.random() * 120,
         size: 14 + Math.random() * 10,
         drift: -60 + Math.random() * 120,
       }));
       setPieces((current) => [...current, ...burst].slice(-32));
-      window.setTimeout(() => setPieces((current) => current.filter((piece) => !burst.some((item) => item.id === piece.id))), 1900);
+      window.setTimeout(() => setPieces((current) => current.filter((piece) => !burst.some((item) => item.id === piece.id))), 4100);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
