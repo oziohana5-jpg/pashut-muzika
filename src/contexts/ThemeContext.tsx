@@ -28,9 +28,11 @@ interface ThemeContextValue {
   themeId: ThemeId;
   theme: ThemeDefinition;
   customAccent: string;
+  customColors: Pick<ThemeDefinition, 'background' | 'surface' | 'surfaceStrong' | 'accent' | 'glow'>;
   confettiEnabled: boolean;
   setThemeId: (id: ThemeId) => void;
   setCustomAccent: (color: string) => void;
+  setCustomColor: (key: keyof ThemeContextValue['customColors'], color: string) => void;
   setConfettiEnabled: (enabled: boolean) => void;
 }
 
@@ -39,16 +41,29 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const [themeId, setThemeId] = useState<ThemeId>(() => (localStorage.getItem('simply_music_theme') as ThemeId) || 'aurora');
   const [customAccent, setCustomAccent] = useState(() => localStorage.getItem('simply_music_custom_accent') || '#f5b942');
+  const [customColors, setCustomColors] = useState<Pick<ThemeDefinition, 'background' | 'surface' | 'surfaceStrong' | 'accent' | 'glow'>>(() => {
+    try {
+      return { ...themes.find((item) => item.id === 'custom')!, ...JSON.parse(localStorage.getItem('simply_music_custom_colors') || '{}') };
+    } catch {
+      return themes.find((item) => item.id === 'custom')!;
+    }
+  });
   const [confettiEnabled, setConfettiEnabled] = useState(() => localStorage.getItem('simply_music_confetti') !== 'false');
 
   const baseTheme = themes.find((item) => item.id === themeId) || themes[0];
   const theme = useMemo(() => themeId === 'custom'
-    ? { ...baseTheme, accent: customAccent, accentSoft: customAccent, glow: customAccent, preview: [customAccent, '#ffffff', baseTheme.background] }
-    : baseTheme, [baseTheme, customAccent, themeId]);
+    ? { ...baseTheme, ...customColors, accentSoft: customColors.accent, preview: [customColors.accent, customColors.glow, customColors.surface] }
+    : baseTheme, [baseTheme, customColors, themeId]);
+
+  const setCustomColor = (key: keyof typeof customColors, color: string) => {
+    setCustomColors((current) => ({ ...current, [key]: color }));
+    if (key === 'accent') setCustomAccent(color);
+  };
 
   useEffect(() => {
     localStorage.setItem('simply_music_theme', themeId);
     localStorage.setItem('simply_music_custom_accent', customAccent);
+    localStorage.setItem('simply_music_custom_colors', JSON.stringify(customColors));
     localStorage.setItem('simply_music_confetti', String(confettiEnabled));
     const root = document.documentElement;
     root.dataset.theme = theme.id;
@@ -58,9 +73,9 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
     root.style.setProperty('--app-accent', theme.accent);
     root.style.setProperty('--app-accent-soft', theme.accentSoft);
     root.style.setProperty('--app-glow', theme.glow);
-  }, [theme, themeId, customAccent, confettiEnabled]);
+  }, [theme, themeId, customAccent, customColors, confettiEnabled]);
 
-  const value = useMemo(() => ({ themeId, theme, customAccent, confettiEnabled, setThemeId, setCustomAccent, setConfettiEnabled }), [themeId, theme, customAccent, confettiEnabled]);
+  const value = useMemo(() => ({ themeId, theme, customAccent, customColors, confettiEnabled, setThemeId, setCustomAccent, setCustomColor, setConfettiEnabled }), [themeId, theme, customAccent, customColors, confettiEnabled]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
 

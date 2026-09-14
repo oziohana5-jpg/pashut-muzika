@@ -38,7 +38,7 @@ export const SettingsView: React.FC = () => {
   const { user, token, logout, updateProfile, changePassword, deleteAccount, openAuthModal } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { audioQuality, setAudioQuality } = usePlayer();
-  const { themeId, setThemeId, customAccent, setCustomAccent, confettiEnabled, setConfettiEnabled } = useTheme();
+  const { themeId, setThemeId, customColors, setCustomColor, confettiEnabled, setConfettiEnabled } = useTheme();
 
   // Audio playback preferences
   const [normalizeAudio, setNormalizeAudio] = useState(true);
@@ -190,13 +190,20 @@ export const SettingsView: React.FC = () => {
         </div>
 
         {themeId === 'custom' && (
-          <label className="relative flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/15 p-3.5">
-            <span><span className="block text-xs font-bold text-white">צבע מוביל אישי</span><span className="mt-1 block text-[10px] text-zinc-500">הצבע יופיע בכפתורים, הדגשות וזוהרים</span></span>
-            <span className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-1.5">
-              <input type="color" value={customAccent} onChange={(event) => setCustomAccent(event.target.value)} className="h-8 w-8 cursor-pointer rounded-lg border-0 bg-transparent" aria-label="בחירת צבע מוביל" />
-              <span className="pe-1 text-[10px] font-mono text-zinc-300">{customAccent.toUpperCase()}</span>
-            </span>
-          </label>
+          <div className="relative grid gap-2 rounded-2xl border border-white/10 bg-black/15 p-3.5 sm:grid-cols-2">
+            {([
+              ['background', 'רקע האפליקציה'],
+              ['surface', 'כרטיסים ומשטחים'],
+              ['surfaceStrong', 'משטחים מודגשים'],
+              ['accent', 'צבע מוביל וכפתורים'],
+              ['glow', 'צבעי זוהר ואפקטים'],
+            ] as const).map(([key, label]) => (
+              <label key={key} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                <span className="text-xs font-semibold text-zinc-200">{label}</span>
+                <span className="flex items-center gap-2"><input type="color" value={customColors[key]} onChange={(event) => setCustomColor(key, event.target.value)} className="h-8 w-8 cursor-pointer rounded-lg border-0 bg-transparent" aria-label={`בחירת ${label}`} /><span className="w-16 text-end text-[10px] font-mono text-zinc-500">{customColors[key].toUpperCase()}</span></span>
+              </label>
+            ))}
+          </div>
         )}
 
         <div className="relative flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/15 p-3.5">
