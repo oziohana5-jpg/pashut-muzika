@@ -814,12 +814,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const togglePlay = () => {
     if (activeEngineRef.current === 'youtube' && ytPlayerRef.current && isYtReadyRef.current) {
-      // A song restored from an older session may still have the old YouTube
-      // engine selected. Re-resolve it through the direct-audio path instead.
       if (playback.isPlaying) {
         ytPlayerRef.current.pauseVideo();
-      } else if (playback.currentSong) {
-        playSong(playback.currentSong, playback.queue);
+      } else {
+        ytPlayerRef.current.playVideo();
       }
     } else if (audioRef.current) {
       if (playback.isPlaying) {
@@ -840,9 +838,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const resume = () => {
     if (activeEngineRef.current === 'youtube' && ytPlayerRef.current && isYtReadyRef.current) {
-      if (playback.currentSong) {
-        playSong(playback.currentSong, playback.queue);
-      }
+      ytPlayerRef.current.playVideo();
     } else if (playback.currentSong && audioRef.current) {
       audioRef.current.play().catch(console.error);
     }
