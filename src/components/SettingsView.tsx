@@ -643,7 +643,7 @@ export const SettingsView: React.FC = () => {
           <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm text-white"><strong className="block text-amber-300">Spotify</strong><span className="text-xs text-zinc-400">מקור השראה ושירותי קטלוג</span></div>
           <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm text-white"><strong className="block text-red-300">YouTube</strong><span className="text-xs text-zinc-400">קליפים רשמיים ומקורות וידאו</span></div>
           <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm text-white"><strong className="block text-blue-300">עוז אוחנה</strong><span className="text-xs text-zinc-400">המתכנת</span></div>
-          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm text-white"><strong className="block text-emerald-300">יונתן גרשקוביץ</strong><span className="text-xs text-zinc-400">יועץ ופיתוח האתר</span></div>
+          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm text-white"><strong className="block text-emerald-300">יהונתן</strong><span className="text-xs text-zinc-400">יועץ ופיתוח האתר</span></div>
         </div>
       </section>
 
