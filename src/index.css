@@ -28,8 +28,8 @@
 [class~="bg-blue-600"] { background-color: var(--app-accent-soft) !important; }
 [class~="border-blue-500"] { border-color: color-mix(in srgb, var(--app-accent) 70%, transparent) !important; }
 .emoji-confetti-layer { position: fixed; inset: 0; z-index: 100; pointer-events: none; overflow: hidden; }
-.emoji-confetti-piece { position: absolute; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .35)); animation: emoji-confetti-fall 8.6s linear forwards; will-change: transform, opacity; }
-@keyframes emoji-confetti-fall { 0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(.8); opacity: 0; } 7% { opacity: 1; } 100% { transform: translate3d(var(--drift), var(--fall-distance), 0) rotate(560deg) scale(.88); opacity: 0; } }
+.emoji-confetti-piece { position: absolute; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .28)); animation: emoji-confetti-fall 8.6s linear forwards; will-change: transform, opacity; }
+@keyframes emoji-confetti-fall { 0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(.45); opacity: 0; } 10% { transform: translate3d(calc(var(--drift) * .06), 7vh, 0) rotate(45deg) scale(.82); opacity: .9; } 100% { transform: translate3d(var(--drift), var(--fall-distance), 0) rotate(360deg) scale(.88); opacity: 0; } }
 
 /* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {

@@ -46,17 +46,17 @@ export const EmojiConfetti: React.FC = () => {
       const now = Date.now();
       const caret = getCaretPosition(target as HTMLInputElement | HTMLTextAreaElement);
       const fallDistance = Math.max(0, window.innerHeight - caret.top + 180);
-      const burst = Array.from({ length: 5 }, (_, index) => ({
+      const burst = Array.from({ length: 4 }, (_, index) => ({
         id: now * 100 + nextPieceId.current++,
         emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
-        left: caret.left + (Math.random() - 0.5) * 18,
-        top: caret.top + (Math.random() - 0.5) * 10,
-        delay: Math.random() * 160,
-        size: 14 + Math.random() * 10,
-        drift: -60 + Math.random() * 120,
+        left: caret.left + (Math.random() - 0.5) * 7,
+        top: caret.top + (Math.random() - 0.5) * 5,
+        delay: index * 110 + Math.random() * 70,
+        size: 13 + Math.random() * 7,
+        drift: -50 + Math.random() * 100,
         fallDistance,
       }));
-      setPieces((current) => [...current, ...burst].slice(-64));
+      setPieces((current) => [...current, ...burst].slice(-36));
       window.setTimeout(() => {
         setPieces((current) => current.filter((piece) => !burst.some((item) => item.id === piece.id)));
       }, 9000);
