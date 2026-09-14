@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Users, Music, Disc3, Radio, Server, AlertTriangle, RefreshCw, Bell, Plus, Trash2, MessageSquare } from 'lucide-react';
-import { AdminStats, User, ProviderConfig, PlaybackLog, AppUpdate, UserFeedback } from '../types';
+import { Shield, Users, Music, Disc3, Radio, Server, AlertTriangle, RefreshCw, Bell, Plus, Trash2, MessageSquare, Wifi } from 'lucide-react';
+import { AdminStats, ProviderConfig, PlaybackLog, AppUpdate, UserFeedback } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useOnlineUsers } from '../hooks/useOnlineUsers';
 
 export const AdminDashboard: React.FC = () => {
   const { token } = useAuth();
   const { t } = useLanguage();
+  const { count: onlineCount, users: onlineUsers, isLoaded: onlineLoaded } = useOnlineUsers();
 
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [logs, setLogs] = useState<PlaybackLog[]>([]);
   const [updates, setUpdates] = useState<AppUpdate[]>([]);
@@ -26,15 +27,13 @@ export const AdminDashboard: React.FC = () => {
 
     Promise.all([
       fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-      fetch('/api/admin/users', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
       fetch('/api/admin/providers', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
       fetch('/api/admin/errors', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
       fetch('/api/updates').then((r) => r.json()),
       fetch('/api/admin/feedback', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
     ])
-      .then(([statsData, usersData, providersData, logsData, updatesData, feedbackData]) => {
+      .then(([statsData, providersData, logsData, updatesData, feedbackData]) => {
         setStats(statsData);
-        setUsers(usersData.users || []);
         setProviders(providersData.providers || []);
         setLogs(logsData.logs || []);
         setUpdates(updatesData.updates || []);
@@ -81,22 +80,6 @@ export const AdminDashboard: React.FC = () => {
     if (!token) return;
     try {
       await fetch(`/api/admin/providers/${providerId}/toggle`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      fetchAdminData();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const toggleUserStatus = async (userId: string) => {
-    if (!token) return;
-    try {
-      await fetch(`/api/admin/users/${userId}/disable`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -304,65 +287,78 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </section>
 
-      {/* Users Management */}
-      <section className="p-6 rounded-2xl bg-[#13151d] border border-white/5 space-y-4">
-        <div className="flex items-center gap-2 text-blue-400">
-          <Users className="w-5 h-5" />
-          <h2 className="text-base font-bold text-white">{t('adminUsers')} ({users.length})</h2>
+      {/* Live Online Listeners */}
+      <section className="p-6 rounded-2xl bg-[#13151d] border border-emerald-500/20 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-emerald-400">
+            <Wifi className="w-5 h-5" />
+            <div>
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                מאזינים פעילים עכשיו
+                {/* Pulsing live dot */}
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                </span>
+              </h2>
+              <p className="text-xs text-zinc-500">נתון חי • מתעדכן כל 20–35 שניות</p>
+            </div>
+          </div>
+          {/* Big count pill */}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
+            <Radio className="w-4 h-4 text-emerald-400" />
+            <span className="text-2xl font-black text-emerald-300 tabular-nums">
+              {onlineLoaded ? onlineCount.toLocaleString('he-IL') : '—'}
+            </span>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-start text-xs text-zinc-300">
-            <thead className="text-zinc-500 uppercase border-b border-white/5">
-              <tr>
-                <th className="py-2.5 px-3 text-start">{t('username')}</th>
-                <th className="py-2.5 px-3 text-start">{t('email')}</th>
-                <th className="py-2.5 px-3 text-start">תפקיד</th>
-                <th className="py-2.5 px-3 text-start">סטטוס</th>
-                <th className="py-2.5 px-3 text-start">פעולות</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {users.map((u) => (
-                <tr key={u.id} className="hover:bg-white/[0.02]">
-                  <td className="py-3 px-3 font-medium text-white flex items-center gap-2">
-                    <img
-                      src={u.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60'}
-                      alt=""
-                      className="w-6 h-6 rounded-full object-cover bg-zinc-800"
-                    />
-                    <span>{u.username}</span>
-                  </td>
-                  <td className="py-3 px-3 text-zinc-400">{u.email}</td>
-                  <td className="py-3 px-3">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        u.role === 'admin'
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                          : 'bg-zinc-800 text-zinc-400'
-                      }`}
-                    >
-                      {u.role.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${u.disabled ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                      {u.disabled ? 'מושעה' : 'פעיל'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3">
-                    <button
-                      onClick={() => toggleUserStatus(u.id)}
-                      className="text-blue-400 hover:text-blue-300 underline"
-                    >
-                      {u.disabled ? 'הפעל חשבון' : 'השעה חשבון'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {/* User avatars grid */}
+        {onlineLoaded && onlineUsers.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold">
+              דוגמת משתמשים מחוברים ({Math.min(onlineUsers.length, 20)} מתוך {onlineCount})
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-start text-xs text-zinc-300">
+                <thead className="text-zinc-500 uppercase border-b border-white/5">
+                  <tr>
+                    <th className="py-2.5 px-3 text-start">שם</th>
+                    <th className="py-2.5 px-3 text-start">אימייל</th>
+                    <th className="py-2.5 px-3 text-start">סטטוס</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {onlineUsers.slice(0, 20).map((u) => (
+                    <tr key={u.id} className="hover:bg-white/[0.02]">
+                      <td className="py-2.5 px-3 font-medium text-white">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${u.avatarSeed}`}
+                            alt=""
+                            className="w-6 h-6 rounded-full bg-zinc-800 shrink-0"
+                          />
+                          <span className="truncate max-w-[140px]">{u.displayName}</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 text-zinc-400 font-mono text-[11px]">{u.email}</td>
+                      <td className="py-2.5 px-3">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400">
+                          מאזין ●
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {onlineCount > 20 && (
+              <p className="text-[11px] text-zinc-600 text-center pt-1">
+                + {(onlineCount - 20).toLocaleString('he-IL')} מאזינים נוספים...
+              </p>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Playback Error Logs */}

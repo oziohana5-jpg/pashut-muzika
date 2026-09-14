@@ -1,9 +1,10 @@
 import React from 'react';
-import { Globe, User as UserIcon, LogIn, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Globe, User as UserIcon, LogIn, Shield, ChevronLeft, ChevronRight, Radio } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ActiveTab, ActiveView } from '../types';
 import { UpdateNotifications } from './UpdateNotifications';
+import { useOnlineUsers } from '../hooks/useOnlineUsers';
 
 interface HeaderProps {
   activeView: ActiveView;
@@ -24,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { language, setLanguage, direction, t } = useLanguage();
   const { user } = useAuth();
+  const { count: onlineCount, isLoaded: onlineLoaded } = useOnlineUsers();
   const toggleLanguage = () => {
     setLanguage(language === 'he' ? 'en' : 'he');
   };
@@ -55,6 +57,23 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Controls (Language, User Profile) */}
       <div className="flex items-center gap-2 sm:gap-2.5">
+        {/* Online Listeners Badge */}
+        {onlineLoaded && (
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/25 text-xs font-medium text-emerald-400 select-none"
+            title="מאזינים עכשיו"
+          >
+            {/* Pulsing live dot */}
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            <Radio className="w-3 h-3 opacity-70" />
+            <span className="tabular-nums">{onlineCount.toLocaleString('he-IL')}</span>
+            <span className="hidden sm:inline text-emerald-500/80">מאזינים</span>
+          </div>
+        )}
+
         {/* Language Switcher */}
         <button
           id="btn-switch-language"
