@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlayerProvider } from './contexts/PlayerContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ActiveView, ActiveTab } from './types';
 
 // Layout & Components
@@ -31,6 +32,7 @@ import { UpdatesView } from './components/UpdatesView';
 import { DownloadsView } from './components/DownloadsView';
 import { NotificationPermissionPrompt } from './components/NotificationPermissionPrompt';
 import { MusicPreferencesModal } from './components/MusicPreferencesModal';
+import { EmojiConfetti } from './components/EmojiConfetti';
 
 const MainApp: React.FC = () => {
   const { direction } = useLanguage();
@@ -149,7 +151,7 @@ const MainApp: React.FC = () => {
   return (
     <div
       dir={direction}
-      className="flex h-screen bg-[#0a0b0e] text-zinc-100 overflow-hidden font-sans"
+      className="app-shell flex h-screen text-zinc-100 overflow-hidden font-sans"
     >
       {/* Desktop Sidebar */}
       <Sidebar
@@ -317,6 +319,7 @@ const MainApp: React.FC = () => {
       {/* Persistent PWA & APK Installation Banner */}
       <PWAInstallBanner />
       <NotificationPermissionPrompt />
+      <EmojiConfetti />
     </div>
   );
 };
@@ -324,11 +327,13 @@ const MainApp: React.FC = () => {
 export default function App() {
   return (
     <LanguageProvider>
-      <AuthProvider>
-        <PlayerProvider>
-          <MainApp />
-        </PlayerProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <PlayerProvider>
+            <MainApp />
+          </PlayerProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </LanguageProvider>
   );
 }

@@ -1,14 +1,35 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --app-background: #090b14;
+    --app-surface: #111526;
+    --app-surface-strong: #181d32;
+    --app-accent: #6d8cff;
+    --app-accent-soft: #3f58c9;
+    --app-glow: #8a5cff;
+  }
+
   body {
     font-family: 'Heebo', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    background-color: #0a0b0e;
+    background-color: var(--app-background);
     color: #f1f3f7;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+.app-shell { background: var(--app-background); }
+.theme-studio { background: linear-gradient(135deg, color-mix(in srgb, var(--app-surface) 92%, var(--app-accent)), var(--app-surface)); }
+[class~="bg-[#0a0b0e]"] { background-color: var(--app-background) !important; }
+[class~="bg-[#13151d]"] { background-color: var(--app-surface) !important; }
+[class~="bg-[#181a22]"], [class~="bg-[#181a24]"] { background-color: var(--app-surface-strong) !important; }
+[class~="text-blue-400"], [class~="text-blue-300"] { color: var(--app-accent) !important; }
+[class~="bg-blue-600"] { background-color: var(--app-accent-soft) !important; }
+[class~="border-blue-500"] { border-color: color-mix(in srgb, var(--app-accent) 70%, transparent) !important; }
+.emoji-confetti-layer { position: fixed; inset: 0; z-index: 100; pointer-events: none; overflow: hidden; }
+.emoji-confetti-piece { position: absolute; top: -32px; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .35)); animation: emoji-confetti-fall 1.8s cubic-bezier(.2, .7, .35, 1) forwards; }
+@keyframes emoji-confetti-fall { 0% { transform: translate3d(0, -10px, 0) rotate(0deg) scale(.7); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate3d(var(--drift), 105vh, 0) rotate(360deg) scale(1.1); opacity: 0; } }
 
 /* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {

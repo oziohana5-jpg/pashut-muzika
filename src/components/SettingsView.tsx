@@ -26,15 +26,19 @@ import {
   Copy,
   ArrowDownToLine,
   Award,
+  Palette,
+  WandSparkles,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { usePlayer } from '../contexts/PlayerContext';
+import { themes, useTheme } from '../contexts/ThemeContext';
 
 export const SettingsView: React.FC = () => {
   const { user, token, logout, updateProfile, changePassword, deleteAccount, openAuthModal } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { audioQuality, setAudioQuality } = usePlayer();
+  const { themeId, setThemeId, customAccent, setCustomAccent, confettiEnabled, setConfettiEnabled } = useTheme();
 
   // Audio playback preferences
   const [normalizeAudio, setNormalizeAudio] = useState(true);
@@ -151,6 +155,55 @@ export const SettingsView: React.FC = () => {
       <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
         {t('settingsTitle')}
       </h1>
+
+      {/* Visual identity */}
+      <section className="theme-studio relative overflow-hidden rounded-3xl border border-white/10 p-5 sm:p-6 space-y-5">
+        <div className="absolute -top-24 -end-16 h-56 w-56 rounded-full bg-[var(--app-glow)]/20 blur-3xl pointer-events-none" />
+        <div className="relative flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--app-accent)]/15 text-[var(--app-accent)] border border-[var(--app-accent)]/30">
+              <Palette className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-white">סגנון עיצוב</h2>
+              <p className="mt-1 text-xs leading-5 text-zinc-400">תבחרו את האווירה של פשוט מוזיקה. השינוי נשמר אוטומטית בכל המכשירים בדפדפן הזה.</p>
+            </div>
+          </div>
+          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[var(--app-accent)]/30 bg-[var(--app-accent)]/10 px-3 py-1 text-[10px] font-bold text-[var(--app-accent)]"><WandSparkles className="h-3.5 w-3.5" /> LIVE STYLE</span>
+        </div>
+
+        <div className="relative grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {themes.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setThemeId(option.id)}
+              className={`group rounded-2xl border p-3 text-start transition ${themeId === option.id ? 'border-[var(--app-accent)] bg-[var(--app-accent)]/10 shadow-lg shadow-[var(--app-accent)]/10' : 'border-white/10 bg-black/10 hover:border-white/25 hover:bg-white/5'}`}
+            >
+              <span className="mb-3 flex h-10 items-center gap-1 overflow-hidden rounded-xl border border-white/10 p-1" style={{ background: option.background }}>
+                {option.preview.map((color) => <i key={color} className="h-full flex-1 rounded-lg" style={{ background: color }} />)}
+              </span>
+              <span className="block text-xs font-bold text-white">{option.id === 'custom' ? 'מותאם אישית' : option.name}</span>
+              <span className="mt-0.5 block truncate text-[10px] text-zinc-500">{option.description}</span>
+            </button>
+          ))}
+        </div>
+
+        {themeId === 'custom' && (
+          <label className="relative flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/15 p-3.5">
+            <span><span className="block text-xs font-bold text-white">צבע מוביל אישי</span><span className="mt-1 block text-[10px] text-zinc-500">הצבע יופיע בכפתורים, הדגשות וזוהרים</span></span>
+            <span className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-1.5">
+              <input type="color" value={customAccent} onChange={(event) => setCustomAccent(event.target.value)} className="h-8 w-8 cursor-pointer rounded-lg border-0 bg-transparent" aria-label="בחירת צבע מוביל" />
+              <span className="pe-1 text-[10px] font-mono text-zinc-300">{customAccent.toUpperCase()}</span>
+            </span>
+          </label>
+        )}
+
+        <div className="relative flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/15 p-3.5">
+          <div className="flex items-center gap-3"><span className="text-xl">✨</span><span><span className="block text-xs font-bold text-white">Emoji Confetti</span><span className="mt-1 block text-[10px] text-zinc-500">אפקט אימוג׳ים קטן בכל פעם שמתחילים להקליד</span></span></div>
+          <button type="button" role="switch" aria-checked={confettiEnabled} onClick={() => setConfettiEnabled(!confettiEnabled)} className={`relative h-6 w-11 shrink-0 rounded-full p-1 transition ${confettiEnabled ? 'bg-[var(--app-accent)]' : 'bg-zinc-700'}`}><span className={`block h-4 w-4 rounded-full bg-white transition-transform ${confettiEnabled ? 'translate-x-5 rtl:-translate-x-5' : ''}`} /></button>
+        </div>
+      </section>
 
       {/* Language Section */}
       <section className="p-6 rounded-2xl bg-[#13151d] border border-white/5 space-y-4">
