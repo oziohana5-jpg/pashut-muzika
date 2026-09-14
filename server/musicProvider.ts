@@ -144,8 +144,8 @@ export async function enrichArtistFromSpotify(artist: Artist): Promise<Artist> {
 
 async function fetchRealArtistImage(artist: Artist): Promise<Artist> {
   const name = artist.nameHe || artist.name;
-  const hasAlbumArt = artist.imageUrl.includes('mzstatic.com') || artist.imageUrl.includes('itunes');
-  if (!hasAlbumArt && !artist.imageUrl.includes('unsplash')) return artist;
+  // A catalog image is already usable; do not block the artist page on Wikipedia.
+  if (artist.imageUrl && !artist.imageUrl.includes('unsplash')) return artist;
   if (!artistImageCache.has(name)) {
     try {
       const controller = new AbortController();
@@ -702,9 +702,10 @@ export class LicensedCatalogProvider implements MusicProvider {
     const decodedArtistId = decodeURIComponent(artistId);
     let artist = db.getArtistById(artistId) || db.getArtistById(decodedArtistId);
     let iTunesTracksLoaded = false;
+    const existingArtistTracks = db.getSongs().filter(song => song.artistId === artistId || song.artistId === decodedArtistId);
 
     // If online itunes artist, fetch their real songs and details
-    if (artistId.startsWith('itunes-art-')) {
+    if (artistId.startsWith('itunes-art-') && existingArtistTracks.length < 10) {
       const numId = artistId.replace('itunes-art-', '');
       try {
         const res = await fetch(`https://itunes.apple.com/lookup?id=${numId}&entity=song&limit=200`);
@@ -761,7 +762,7 @@ export class LicensedCatalogProvider implements MusicProvider {
                   isFullLength: true,
                   licenseInfo: 'Licensed Catalog Master Stream',
                 };
-                db.upsertSong(s);
+                db.upsertSong(s, false);
                 iTunesTracksLoaded = true;
                 const importedAlbumId = `itunes-alb-${item.collectionId || item.trackId}`;
                 if (!db.getAlbumById(importedAlbumId) && item.collectionName) {
@@ -779,6 +780,7 @@ export class LicensedCatalogProvider implements MusicProvider {
                 }
               }
             }
+            if (iTunesTracksLoaded) db.save();
           }
         }
       } catch (err) {
@@ -860,7 +862,7 @@ export class LicensedCatalogProvider implements MusicProvider {
               isFullLength: true,
               licenseInfo: 'Licensed Catalog Metadata',
             };
-            db.upsertSong(song);
+            db.upsertSong(song, false);
             if (!allTracks.some(existing => existing.id === song.id)) allTracks.push(song);
             if (item.collectionName && !db.getAlbumById(song.albumId)) {
               db.upsertAlbum({
@@ -876,6 +878,7 @@ export class LicensedCatalogProvider implements MusicProvider {
               });
             }
           }
+          if (allTracks.length > 0) db.save();
         }
       } catch (error) {
         console.warn('Could not expand artist catalog:', error);
