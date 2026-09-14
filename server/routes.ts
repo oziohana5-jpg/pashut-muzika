@@ -584,11 +584,53 @@ apiRouter.get('/music/home', async (req: AuthenticatedRequest, res) => {
     recentlyPlayedSongs = allSongs.slice(0, 6);
   }
 
-  // Recommendation engine: mix of high plays + diverse genres
+  const preferences = userId ? db.getUserById(userId)?.preferences : undefined;
+  const likedIds = userId ? new Set(db.getLikedSongs(userId)) : new Set<string>();
+  const recentIds = new Set(recentlyPlayedSongs.map(song => song.id));
+  const recentArtistIds = new Set(recentlyPlayedSongs.map(song => song.artistId));
+  const selectedArtistIds = new Set(preferences?.artistIds || []);
+  const selectedGenres = new Set((preferences?.genres || []).map(genre => genre.toLocaleLowerCase()));
+  const genreMatches = (song: Song): boolean => {
+    const values = [song.genre, song.albumName, song.artistName].join(' ').toLocaleLowerCase();
+    return Array.from(selectedGenres).some(genre => {
+      const aliases: Record<string, string[]> = {
+        'פופ': ['pop'], 'מזרחית': ['mizrahi', 'mediterranean'], 'היפ הופ': ['hip hop', 'rap'],
+        'רוק': ['rock'], 'אלקטרוני': ['electronic', 'edm'], 'אקוסטי': ['acoustic'],
+        'מוזיקה ישראלית': ['israeli'], 'מוזיקה בינלאומית': ['pop', 'rock', 'r&b', 'electronic'],
+      };
+      return values.includes(genre) || (aliases[genre] || []).some(alias => values.includes(alias));
+    });
+  };
+
+  const personalized = [...allSongs]
+    .map(song => {
+      let score = 0;
+      if (selectedArtistIds.has(song.artistId)) score += 1000;
+      if (genreMatches(song)) score += 350;
+      if (likedIds.has(song.id)) score += 220;
+      if (recentArtistIds.has(song.artistId)) score += 90;
+      if (!recentIds.has(song.id)) score += 35;
+      score += Math.min(song.plays || 0, 1000000) / 1000000;
+      const stableVariation = Math.abs(song.id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) + (userId?.length || 0)) % 17;
+      return { song, score: score + stableVariation / 100 };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const pickedArtists = new Map<string, number>();
+  const madeForYou = personalized
+    .filter(({ song }) => {
+      const count = pickedArtists.get(song.artistId) || 0;
+      if (count >= 2) return false;
+      pickedArtists.set(song.artistId, count + 1);
+      return true;
+    })
+    .slice(0, 8)
+    .map(({ song }) => song);
+
+  // General catalog sections remain broad; only Made For You is personalized.
   const popularSongs = [...allSongs].sort((a, b) => b.plays - a.plays).slice(0, 8);
   const newReleases = [...allSongs].reverse().slice(0, 8);
   const recommendedSongs = [...allSongs].sort(() => 0.5 - Math.random()).slice(0, 8);
-  const madeForYou = [...allSongs].sort((a, b) => a.title.localeCompare(b.title)).slice(0, 8);
 
   res.json({
     recentlyPlayed: recentlyPlayedSongs,
