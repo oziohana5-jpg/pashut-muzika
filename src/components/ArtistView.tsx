@@ -23,6 +23,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
   const [followerCount, setFollowerCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [showVerifiedInfo, setShowVerifiedInfo] = useState(false);
+  const [followCelebration, setFollowCelebration] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState(false);
 
@@ -83,6 +84,10 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
       });
       const data = await res.json();
       setIsFollowing(data.isFollowed ?? data.isFollowing);
+      if (data.isFollowed ?? data.isFollowing) {
+        setFollowCelebration(true);
+        window.setTimeout(() => setFollowCelebration(false), 1100);
+      }
       setFollowerCount((current) => current + ((data.isFollowed ?? data.isFollowing) ? 1 : -1));
       if (artist) {
         setArtist({
@@ -181,7 +186,10 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 border-b border-white/10 px-5 py-6 sm:px-10">
         <button id="btn-play-all-artist" onClick={playAll} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-500 active:scale-95"><Play className="h-4 w-4 fill-current" /> {t('playAll')}</button>
         <button id="btn-shuffle-artist" onClick={shuffleAll} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.06] px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 active:scale-95"><Shuffle className="h-4 w-4" /> {t('shuffle')}</button>
-        <button id="btn-follow-artist" onClick={toggleFollow} className={`rounded-full px-5 py-3 text-sm font-semibold transition active:scale-95 ${isFollowing ? 'border border-blue-400/40 bg-blue-500/15 text-blue-300' : 'border border-white/15 bg-transparent text-white hover:bg-white/10'}`}>{isFollowing ? t('unfollow') : t('follow')}</button>
+        <button id="btn-follow-artist" onClick={toggleFollow} className={`relative overflow-visible rounded-full px-5 py-3 text-sm font-semibold transition active:scale-95 ${followCelebration ? 'scale-110 border border-emerald-300 bg-emerald-500/25 text-emerald-200 shadow-lg shadow-emerald-500/30' : isFollowing ? 'border border-blue-400/40 bg-blue-500/15 text-blue-300' : 'border border-white/15 bg-transparent text-white hover:bg-white/10'}`}>
+          {followCelebration && <><Sparkles className="absolute -top-4 -end-3 h-4 w-4 animate-ping text-amber-300" /><span className="absolute -top-3 -start-3 h-2 w-2 animate-bounce rounded-full bg-emerald-300" /><span className="absolute -bottom-2 end-1 h-2 w-2 animate-bounce rounded-full bg-blue-300" /></>}
+          {followCelebration ? '✓ נשמר!' : isFollowing ? t('unfollow') : t('follow')}
+        </button>
         <span className="ms-auto hidden items-center gap-1 text-xs text-zinc-500 sm:inline-flex"><ArrowUpLeft className="h-4 w-4" /> {artist.nameHe || artist.name}</span>
       </div>
 

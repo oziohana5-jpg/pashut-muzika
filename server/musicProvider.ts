@@ -697,6 +697,7 @@ export class LicensedCatalogProvider implements MusicProvider {
   public async getArtist(artistId: string): Promise<{ artist: Artist; topTracks: Song[]; albums: Album[]; singles: Song[] } | null> {
     const decodedArtistId = decodeURIComponent(artistId);
     let artist = db.getArtistById(artistId) || db.getArtistById(decodedArtistId);
+    let iTunesTracksLoaded = false;
 
     // If online itunes artist, fetch their real songs and details
     if (artistId.startsWith('itunes-art-')) {
@@ -757,6 +758,7 @@ export class LicensedCatalogProvider implements MusicProvider {
                   licenseInfo: 'Licensed Catalog Master Stream',
                 };
                 db.upsertSong(s);
+                iTunesTracksLoaded = true;
                 const importedAlbumId = `itunes-alb-${item.collectionId || item.trackId}`;
                 if (!db.getAlbumById(importedAlbumId) && item.collectionName) {
                   db.upsertAlbum({
@@ -822,7 +824,7 @@ export class LicensedCatalogProvider implements MusicProvider {
     // A local artist can have only a few seeded tracks. Fill the profile from
     // the public iTunes catalog so artist pages are not limited to the local
     // popular-song sample.
-    if (artist && allTracks.length < 10 && !artistId.startsWith('jamendo-')) {
+    if (artist && allTracks.length < 10 && !artistId.startsWith('jamendo-') && !iTunesTracksLoaded) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);

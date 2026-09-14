@@ -704,16 +704,25 @@ apiRouter.get('/music/recommendations', async (req: AuthenticatedRequest, res) =
 
   const userId = req.user?.id;
   let favoriteGenres: string[] = [];
+  let followedArtistIds: string[] = [];
 
   if (userId) {
+    followedArtistIds = db.getFollowedArtists(userId);
     const likedIds = db.getLikedSongs(userId);
     const liked = likedIds.map(id => db.getSongById(id)).filter((s): s is Song => Boolean(s));
     favoriteGenres = Array.from(new Set(liked.map(s => s.genre)));
   }
 
   let recommendedTracks = allSongs;
+  const followedTracks = followedArtistIds.length > 0
+    ? allSongs.filter(song => followedArtistIds.includes(song.artistId))
+    : [];
+  if (followedTracks.length > 0) {
+    recommendedTracks = [...followedTracks, ...allSongs.filter(song => !followedArtistIds.includes(song.artistId))];
+  }
   if (favoriteGenres.length > 0) {
-    recommendedTracks = allSongs.filter(s => favoriteGenres.includes(s.genre));
+    const genreTracks = allSongs.filter(s => favoriteGenres.includes(s.genre));
+    recommendedTracks = [...recommendedTracks.filter(song => genreTracks.includes(song)), ...genreTracks.filter(song => !recommendedTracks.includes(song))];
     if (recommendedTracks.length < 4) recommendedTracks = allSongs;
   }
 
