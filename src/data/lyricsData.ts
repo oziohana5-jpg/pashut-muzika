@@ -959,6 +959,12 @@ export function getSongLyrics(song: {
   const id = (song.id || '').toLowerCase();
   const artist = (song.artistName || '').toLowerCase();
 
+  // This track must use the verified synchronized source below. The old local
+  // placeholder was not the real recording and could show unrelated lyrics.
+  if (title.includes('איך שהיא רוקדת') || title.includes('רוקדת') || id.includes('rokedet')) {
+    return [];
+  }
+
   // 1. עומר אדם
   if (id === 'song-omer-1' || title.includes('שני משוגעים') || title.includes('משוגעים')) {
     return SYNCHRONIZED_LYRICS['shnei-meshugaim'];
@@ -1059,11 +1065,6 @@ export function getSongLyrics(song: {
   }
   if (id === 'song-weeknd-2' || title.includes('save your tears') || title.includes('tears')) {
     return SYNCHRONIZED_LYRICS['save-your-tears'];
-  }
-
-  // 10. עדן חסון
-  if (title.includes('איך שהיא רוקדת') || title.includes('רוקדת') || id.includes('rokedet')) {
-    return SYNCHRONIZED_LYRICS['ech-shehi-rokedet'];
   }
 
   // Direct lookup check
