@@ -2,9 +2,11 @@ name: Keep Render Alive
 
 on:
   schedule:
-    # Ping often enough to reduce idle sleep on the free Render instance.
-    - cron: '*/5 * * * *'
+    # Ping every 4 minutes to prevent Render free tier from sleeping
+    - cron: '*/4 * * * *'
   workflow_dispatch: # Allow manual trigger
+  push:
+    branches: [main, master] # Also runs on deploy to reset GitHub's inactivity timer
 
 jobs:
   ping:

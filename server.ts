@@ -109,7 +109,27 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Simply Music server running on http://0.0.0.0:${PORT}`);
+    startKeepAlive(PORT);
   });
+}
+
+// Self-ping every 3 minutes to prevent Render free tier from sleeping
+function startKeepAlive(port: number) {
+  const INTERVAL_MS = 3 * 60 * 1000; // 3 minutes
+  const url = process.env.RENDER_EXTERNAL_URL
+    ? `${process.env.RENDER_EXTERNAL_URL}/api/health`
+    : `http://localhost:${port}/api/health`;
+
+  setInterval(async () => {
+    try {
+      const res = await fetch(url);
+      console.log(`[keep-alive] ping ${url} → ${res.status}`);
+    } catch (err) {
+      console.warn(`[keep-alive] ping failed:`, err);
+    }
+  }, INTERVAL_MS);
+
+  console.log(`[keep-alive] Self-ping started every 3 minutes → ${url}`);
 }
 
 startServer().catch((err) => {
