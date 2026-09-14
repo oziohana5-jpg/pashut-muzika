@@ -73,6 +73,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     let savedShuffle = false;
     let savedRepeat: RepeatMode = 'off';
     let savedSong: Song | null = null;
+    let savedVideoMode = true;
     try {
       const v = localStorage.getItem('simply_music_volume');
       if (v !== null) savedVol = parseFloat(v);
@@ -82,6 +83,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (r === 'off' || r === 'all' || r === 'one') savedRepeat = r;
       const lastSongStr = localStorage.getItem('simply_music_last_song');
       if (lastSongStr) savedSong = JSON.parse(lastSongStr);
+      const videoMode = localStorage.getItem('simply_music_video_mode');
+      if (videoMode !== null) savedVideoMode = videoMode === 'true';
     } catch {}
 
     let savedPreset: EqualizerPreset = 'flat';
@@ -116,7 +119,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       error: null,
       isFullPlayerOpen: false,
       isQueueOpen: false,
-      isVideoMode: false,
+      isVideoMode: savedVideoMode,
       isEqualizerOpen: false,
       isSleepTimerOpen: false,
       sleepTimerSecondsLeft: null,
@@ -955,7 +958,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const toggleVideoMode = () => {
-    setPlayback(prev => ({ ...prev, isVideoMode: !prev.isVideoMode }));
+    setPlayback(prev => {
+      const nextVideoMode = !prev.isVideoMode;
+      try {
+        localStorage.setItem('simply_music_video_mode', String(nextVideoMode));
+      } catch {}
+      return { ...prev, isVideoMode: nextVideoMode };
+    });
   };
 
   const toggleShuffle = () => {

@@ -34,7 +34,102 @@ const FALLBACK_STREAMS: string[] = [];
 const JAMENDO_API = 'https://api.jamendo.com/v3.0';
 const searchCache = new Map<string, { expiresAt: number; result: SearchResult }>();
 const artistImageCache = new Map<string, string | null>();
+const spotifyArtistCache = new Map<string, Artist | null>();
 const SEARCH_CACHE_TTL = 5 * 60 * 1000;
+
+async function getSpotifyAccessToken(): Promise<string | null> {
+  const clientId = process.env.SPOTIFY_CLIENT_ID?.trim();
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) return null;
+
+  try {
+    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const response = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials',
+    });
+    if (!response.ok) return null;
+    const data = await response.json() as { access_token?: string };
+    return data.access_token || null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchITunesArtistProfile(artist: Artist): Promise<Artist> {
+  const name = (artist.nameHe || artist.name).trim();
+  try {
+    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(name)}&entity=song&limit=25`);
+    if (!response.ok) return artist;
+    const data = await response.json() as { results?: Array<{ artistName?: string; artworkUrl100?: string; primaryGenreName?: string }> };
+    const match = (data.results || []).find(item => item.artistName?.toLocaleLowerCase() === name.toLocaleLowerCase()) || data.results?.[0];
+    const imageUrl = match?.artworkUrl100?.replace('100x100bb', '600x600bb');
+    if (!match || !imageUrl) return artist;
+    return {
+      ...artist,
+      imageUrl,
+      bannerUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1600&auto=format&fit=crop&q=80',
+      genres: match.primaryGenreName ? [match.primaryGenreName, ...artist.genres.filter(genre => genre !== match.primaryGenreName)].slice(0, 4) : artist.genres,
+    };
+  } catch {
+    return artist;
+  }
+}
+
+async function fetchSpotifyArtistProfile(artist: Artist): Promise<Artist> {
+  const name = (artist.nameHe || artist.name).trim();
+  const key = name.toLocaleLowerCase();
+  if (spotifyArtistCache.has(key)) return spotifyArtistCache.get(key) || artist;
+
+  const token = await getSpotifyAccessToken();
+  if (!token) {
+    spotifyArtistCache.set(key, null);
+    return fetchITunesArtistProfile(artist);
+  }
+
+  try {
+    const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(name)}&type=artist&limit=5`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      spotifyArtistCache.set(key, null);
+      return fetchITunesArtistProfile(artist);
+    }
+
+    const data = await response.json() as {
+      artists?: { items?: Array<{ name: string; images?: Array<{ url: string }>; genres?: string[]; popularity?: number }> };
+    };
+    const normalizedName = name.toLocaleLowerCase();
+    const match = (data.artists?.items || []).find(item => item.name.toLocaleLowerCase() === normalizedName) || data.artists?.items?.[0];
+    const imageUrl = match?.images?.[0]?.url;
+    if (!match || !imageUrl) {
+      spotifyArtistCache.set(key, null);
+      return artist;
+    }
+
+    const enriched = {
+      ...artist,
+      imageUrl,
+      bannerUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1600&auto=format&fit=crop&q=80',
+      genres: match.genres?.length ? match.genres.slice(0, 4) : artist.genres,
+      monthlyListeners: Math.max(artist.monthlyListeners || 0, (match.popularity || 0) * 100000),
+      verified: true,
+    };
+    spotifyArtistCache.set(key, enriched);
+    return enriched;
+  } catch {
+    spotifyArtistCache.set(key, null);
+    return artist;
+  }
+}
+
+export async function enrichArtistFromSpotify(artist: Artist): Promise<Artist> {
+  return fetchSpotifyArtistProfile(artist);
+}
 
 async function fetchRealArtistImage(artist: Artist): Promise<Artist> {
   const name = artist.nameHe || artist.name;
@@ -143,7 +238,7 @@ async function fetchOnlineCatalog(query: string, filter?: string): Promise<{ son
     const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     const term = encodeURIComponent(query);
-    const searchUrl = `https://itunes.apple.com/search?term=${term}&entity=song&limit=30`;
+    const searchUrl = `https://itunes.apple.com/search?term=${term}&entity=song&limit=200`;
 
     const res = await fetch(searchUrl, {
       signal: controller.signal,
@@ -304,6 +399,18 @@ export async function searchYouTubeTracks(query: string): Promise<Song[]> {
         };
         songs.push(song);
         db.upsertSong(song);
+        db.upsertArtist({
+          id: song.artistId,
+          name: song.artistName,
+          nameHe: song.artistName,
+          bio: `Artist profile for ${song.artistName}`,
+          bioHe: `פרופיל האמן של ${song.artistName}`,
+          imageUrl: thumb,
+          bannerUrl: thumb,
+          monthlyListeners: 0,
+          genres: [song.genre],
+          verified: false,
+        });
         if (songs.length >= 12) break;
       }
     }
@@ -456,25 +563,17 @@ export class LicensedCatalogProvider implements MusicProvider {
         )
       : [];
 
-    // Local catalog results are instant. Do not make users wait for remote
-    // providers when the app already has a relevant answer.
+    // Keep local matches, but also query the public catalog so an artist or
+    // album page is not limited to the few tracks already cached locally.
     const localResult: SearchResult = {
       songs: matchedSongs,
       artists: matchedArtists,
       albums: matchedAlbums,
       playlists: matchedPlaylists,
     };
-    if (matchedSongs.length || matchedArtists.length || matchedAlbums.length || matchedPlaylists.length) {
-      searchCache.set(cacheKey, { expiresAt: Date.now() + SEARCH_CACHE_TTL, result: localResult });
-      return localResult;
-    }
-
-    // Only empty local searches use remote providers. This keeps normal search
-    // responsive while preserving discovery for songs outside the catalog.
     const onlineResults = await fetchOnlineCatalog(query, filter);
     const shouldSearchYouTube =
       filter === 'songs' &&
-      matchedSongs.length === 0 &&
       onlineResults.songs.length === 0;
     const ytSongs = shouldSearchYouTube ? await searchYouTubeTracks(query) : [];
 
@@ -682,6 +781,10 @@ export class LicensedCatalogProvider implements MusicProvider {
     }
 
     if (!artist) return null;
+    if (!artist.verified || artist.imageUrl.includes('unsplash')) {
+      artist = await fetchSpotifyArtistProfile(artist);
+      db.upsertArtist(artist);
+    }
     artist = await fetchRealArtistImage(artist);
     db.upsertArtist(artist);
     const topTracks = [...allTracks].sort((a, b) => b.plays - a.plays);

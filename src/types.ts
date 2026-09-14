@@ -146,6 +146,15 @@ export interface AppUpdate {
   authorName: string;
 }
 
+export interface UserFeedback {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  message: string;
+  createdAt: string;
+}
+
 export interface ProviderConfig {
   id: string;
   name: string;

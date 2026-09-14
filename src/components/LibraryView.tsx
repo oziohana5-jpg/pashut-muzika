@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Heart, Disc3, Users, Clock, Radio, Play } from 'lucide-react';
+import { Plus, Heart, Disc3, Users, Clock, Radio, Play, Link } from 'lucide-react';
 import { Playlist, Song, Album, Artist } from '../types';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,6 +12,7 @@ interface LibraryViewProps {
   onNavigateArtist: (id: string) => void;
   onNavigateLiked: () => void;
   onCreatePlaylist: () => void;
+  onImportSpotifyPlaylist: () => void;
 }
 
 type LibraryTab = 'playlists' | 'albums' | 'artists' | 'history';
@@ -22,6 +23,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onNavigateArtist,
   onNavigateLiked,
   onCreatePlaylist,
+  onImportSpotifyPlaylist,
 }) => {
   const { playSong, playback } = usePlayer();
   const { user, token, openAuthModal, loginWithGoogle } = useAuth();
@@ -113,13 +115,16 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           {t('libraryTitle')}
         </h1>
 
-        <button
-          onClick={onCreatePlaylist}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 active:scale-95 transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{t('createPlaylist')}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={onImportSpotifyPlaylist} className="flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs font-semibold text-green-300 transition hover:bg-green-500/20">
+            <Link className="h-4 w-4" />
+            <span>{t('importSpotifyPlaylist')}</span>
+          </button>
+          <button onClick={onCreatePlaylist} className="flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-500 active:scale-95">
+            <Plus className="h-4 w-4" />
+            <span>{t('createPlaylist')}</span>
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

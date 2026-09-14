@@ -13,6 +13,7 @@ import { FullPlayer } from './components/FullPlayer';
 import { QueueModal } from './components/QueueModal';
 import { AuthModal } from './components/AuthModal';
 import { CreatePlaylistModal } from './components/CreatePlaylistModal';
+import { ImportSpotifyPlaylistModal } from './components/ImportSpotifyPlaylistModal';
 import { AndroidApkModal } from './components/AndroidApkModal';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 
@@ -60,6 +61,7 @@ const MainApp: React.FC = () => {
 
   // Modals
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
+  const [isSpotifyImportOpen, setIsSpotifyImportOpen] = useState(false);
   const [isApkModalOpen, setIsApkModalOpen] = useState(false);
   const [apkModalInitialTab, setApkModalInitialTab] = useState<'windows' | 'website' | 'android' | 'ios'>('windows');
 
@@ -193,6 +195,13 @@ const MainApp: React.FC = () => {
               onNavigateArtist={handleNavigateArtist}
               onNavigateLiked={handleNavigateLiked}
               onCreatePlaylist={handleCreatePlaylistClick}
+              onImportSpotifyPlaylist={() => {
+                if (!user) {
+                  openAuthModal('כדי לייבא פלייליסט ולשמור אותו בספרייה האישית, יש להתחבר לחשבון.', 'login');
+                } else {
+                  setIsSpotifyImportOpen(true);
+                }
+              }}
             />
           )}
 
@@ -273,6 +282,15 @@ const MainApp: React.FC = () => {
         isOpen={isCreatePlaylistOpen}
         onClose={() => setIsCreatePlaylistOpen(false)}
         onCreated={(newId) => {
+          loadUserPlaylists();
+          handleNavigatePlaylist(newId);
+        }}
+      />
+
+      <ImportSpotifyPlaylistModal
+        isOpen={isSpotifyImportOpen}
+        onClose={() => setIsSpotifyImportOpen(false)}
+        onImported={(newId) => {
           loadUserPlaylists();
           handleNavigatePlaylist(newId);
         }}

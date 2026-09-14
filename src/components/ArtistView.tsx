@@ -133,7 +133,7 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId, onNavigateAlbu
     <div className="pb-28 text-right">
       <section className="relative isolate overflow-hidden border-b border-white/10 bg-[#0e1118]">
         <div className="absolute inset-0 -z-20">
-            <img src={artist.imageUrl || DEFAULT_ARTIST_IMAGE} alt="" onError={(event) => handleImageError(event, DEFAULT_ARTIST_IMAGE)} className="h-full w-full object-cover opacity-20 blur-2xl" />
+            <img src={artist.bannerUrl || artist.imageUrl || DEFAULT_ARTIST_IMAGE} alt="" onError={(event) => handleImageError(event, DEFAULT_ARTIST_IMAGE)} className="h-full w-full object-cover opacity-20 blur-2xl" />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,#080a0f_8%,rgba(8,10,15,.9)_58%,rgba(8,10,15,.55)),linear-gradient(0deg,#0a0b0e_0%,transparent_70%)]" />
         </div>
         <div className="mx-auto grid min-h-[430px] max-w-6xl items-end gap-7 px-5 pb-9 pt-16 sm:grid-cols-[240px_1fr] sm:gap-10 sm:px-10 sm:pb-12">

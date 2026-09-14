@@ -2,8 +2,8 @@ name: Keep Render Alive
 
 on:
   schedule:
-    # Render free services sleep after inactivity; this external check wakes them.
-    - cron: '*/10 * * * *'
+    # Ping often enough to reduce idle sleep on the free Render instance.
+    - cron: '*/5 * * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:

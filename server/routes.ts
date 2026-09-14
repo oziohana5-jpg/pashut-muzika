@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { db, hashPassword, verifyPassword } from './db';
-import { defaultMusicProvider, musicService, resolveYouTubeForTrack } from './musicProvider';
+import { defaultMusicProvider, enrichArtistFromSpotify, musicService, resolveYouTubeForTrack } from './musicProvider';
 import {
   AuthenticatedRequest,
   generateToken,
@@ -644,8 +644,9 @@ apiRouter.get('/music/artist/:id', async (req: AuthenticatedRequest, res) => {
       genres: [String(req.query.genre || 'Music')],
       verified: false,
     };
-    db.upsertArtist(fallbackArtist);
-    res.json({ artist: fallbackArtist, topTracks: [], albums: [], singles: [], isFollowing: false });
+    const enrichedArtist = await enrichArtistFromSpotify(fallbackArtist);
+    db.upsertArtist(enrichedArtist);
+    res.json({ artist: enrichedArtist, topTracks: [], albums: [], singles: [], isFollowing: false });
     return;
   }
   res.json({
@@ -804,6 +805,165 @@ apiRouter.get('/playlists', (req, res) => {
   res.json({ playlists });
 });
 
+function spotifyPlaylistId(value: string): string | null {
+  const trimmed = value.trim();
+  const webMatch = trimmed.match(/open\.spotify\.com\/(?:intl-[^/]+\/)?playlist\/([A-Za-z0-9]+)/i);
+  const uriMatch = trimmed.match(/^spotify:playlist:([A-Za-z0-9]+)$/i);
+  const idMatch = trimmed.match(/^([A-Za-z0-9]{22})$/);
+  return webMatch?.[1] || uriMatch?.[1] || idMatch?.[1] || null;
+}
+
+async function getSpotifyAccessToken(): Promise<string | null> {
+  const configuredToken = process.env.SPOTIFY_ACCESS_TOKEN?.trim();
+  if (configuredToken) return configuredToken;
+
+  const clientId = process.env.SPOTIFY_CLIENT_ID?.trim();
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) return null;
+
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+  });
+  if (!response.ok) return null;
+  const data = await response.json() as { access_token?: string };
+  return data.access_token || null;
+}
+
+apiRouter.post('/playlists/import/spotify', requireAuth, async (req: AuthenticatedRequest, res) => {
+  const playlistId = spotifyPlaylistId(String(req.body?.url || ''));
+  if (!playlistId) {
+    res.status(400).json({ error: 'יש להזין קישור תקין לפלייליסט ציבורי של Spotify.' });
+    return;
+  }
+
+  try {
+    const accessToken = await getSpotifyAccessToken();
+    if (!accessToken) {
+      const hasSpotifyCredentials = Boolean(process.env.SPOTIFY_CLIENT_ID?.trim() && process.env.SPOTIFY_CLIENT_SECRET?.trim());
+      res.status(503).json({
+        error: hasSpotifyCredentials
+          ? 'Spotify חסמה את ה־Web API לחשבון הזה. ייבוא פלייליסטים דורש חשבון Spotify Premium.'
+          : 'ייבוא Spotify דורש הגדרת SPOTIFY_CLIENT_ID ו־SPOTIFY_CLIENT_SECRET בשרת.',
+      });
+      return;
+    }
+
+    const headers = { Authorization: `Bearer ${accessToken}` };
+    const playlistResponse = await fetch(
+      `https://api.spotify.com/v1/playlists/${playlistId}?fields=name,description,images,tracks.next,tracks.items(track(id,name,duration_ms,artists(id,name),album(id,name,images,release_date),is_local))`,
+      { headers },
+    );
+    if (!playlistResponse.ok) {
+      res.status(502).json({ error: 'לא ניתן לקרוא את הפלייליסט. ודא שהוא ציבורי והקישור תקין.' });
+      return;
+    }
+
+    type SpotifyTrack = {
+      id: string;
+      name: string;
+      duration_ms: number;
+      is_local?: boolean;
+      artists?: Array<{ id?: string; name: string }>;
+      album?: { id?: string; name?: string; images?: Array<{ url: string }>; release_date?: string };
+    };
+    type SpotifyPlaylistResponse = {
+      name?: string;
+      description?: string | null;
+      images?: Array<{ url: string }>;
+      tracks?: { items?: Array<{ track?: SpotifyTrack | null }>; next?: string | null };
+    };
+
+    const firstPage = await playlistResponse.json() as SpotifyPlaylistResponse;
+    const spotifyTracks: SpotifyTrack[] = [];
+    let page = firstPage.tracks;
+    while (page) {
+      for (const item of page.items || []) {
+        if (item.track?.id && item.track.name && !item.track.is_local) spotifyTracks.push(item.track);
+      }
+      if (!page.next || spotifyTracks.length >= 1000) break;
+      const nextResponse = await fetch(page.next, { headers });
+      if (!nextResponse.ok) break;
+      page = (await nextResponse.json()) as SpotifyPlaylistResponse['tracks'];
+    }
+
+    if (spotifyTracks.length === 0) {
+      res.status(422).json({ error: 'הפלייליסט לא מכיל שירים זמינים לייבוא.' });
+      return;
+    }
+
+    const normalize = (value: string): string => value.toLocaleLowerCase().normalize('NFKC').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    const catalogSongs = db.getSongs();
+    const songIds: string[] = [];
+    for (const track of spotifyTracks) {
+      const artistName = track.artists?.map(artist => artist.name).join(', ') || 'Unknown Artist';
+      const existing = catalogSongs.find(song => normalize(song.title) === normalize(track.name) && normalize(song.artistName).includes(normalize(artistName.split(',')[0])));
+      if (existing) {
+        songIds.push(existing.id);
+        continue;
+      }
+
+      const artist = track.artists?.[0];
+      const artistId = `spotify-art-${artist?.id || normalize(artistName).replace(/\s+/g, '-')}`;
+      const albumId = `spotify-alb-${track.album?.id || track.id}`;
+      const coverUrl = track.album?.images?.[0]?.url || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80';
+      const importedSong: Song = {
+        id: `spotify-track-${track.id}`,
+        title: track.name,
+        titleHe: track.name,
+        artistId,
+        artistName,
+        albumId,
+        albumName: track.album?.name || 'Single',
+        coverUrl,
+        duration: Math.round((track.duration_ms || 210000) / 1000),
+        releaseDate: track.album?.release_date?.substring(0, 10) || '2024-01-01',
+        genre: 'Music',
+        streamUrl: '',
+        provider: 'spotify_import',
+        audioFormat: 'aac',
+        bitrate: 256,
+        plays: 0,
+        isFullLength: true,
+        licenseInfo: 'Metadata imported from Spotify; playback uses an authorized catalog source',
+      };
+      db.upsertSong(importedSong);
+      db.upsertArtist({
+        id: artistId,
+        name: artistName,
+        nameHe: artistName,
+        bio: `Artist profile for ${artistName}`,
+        bioHe: `פרופיל האמן של ${artistName}`,
+        imageUrl: coverUrl,
+        bannerUrl: coverUrl,
+        monthlyListeners: 0,
+        genres: ['Music'],
+        verified: false,
+      });
+      songIds.push(importedSong.id);
+    }
+
+    const importedPlaylist = db.createPlaylist({
+      name: firstPage.name?.trim() || 'Spotify Playlist',
+      description: firstPage.description || 'Imported from Spotify',
+      coverUrl: firstPage.images?.[0]?.url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80',
+      ownerId: req.user!.id,
+      ownerName: req.user!.displayName || req.user!.username,
+      isPublic: false,
+      songIds,
+    });
+    res.status(201).json({ playlist: importedPlaylist, importedCount: songIds.length });
+  } catch (error) {
+    console.error('Spotify playlist import failed:', error);
+    res.status(502).json({ error: 'ייבוא הפלייליסט נכשל. נסה שוב בעוד רגע.' });
+  }
+});
+
 apiRouter.post('/playlists', requireAuth, (req: AuthenticatedRequest, res) => {
   const user = req.user!;
   const { name, description, coverUrl, isPublic } = req.body;
@@ -952,6 +1112,26 @@ apiRouter.put('/playlists/:id/reorder', requireAuth, (req: AuthenticatedRequest,
 // ==========================================
 // 9. ADMIN SYSTEM
 // ==========================================
+apiRouter.post('/feedback', requireAuth, (req: AuthenticatedRequest, res) => {
+  const message = String(req.body?.message || '').trim();
+  if (!message) {
+    res.status(400).json({ error: 'יש לכתוב הודעה לפני השליחה.' });
+    return;
+  }
+  if (message.length > 2000) {
+    res.status(400).json({ error: 'ההודעה ארוכה מדי.' });
+    return;
+  }
+
+  const feedback = db.createFeedback({
+    userId: req.user!.id,
+    userName: req.user!.displayName || req.user!.username,
+    userEmail: req.user!.email,
+    message,
+  });
+  res.status(201).json({ feedback: { id: feedback.id, createdAt: feedback.createdAt } });
+});
+
 apiRouter.get('/updates', (req, res) => {
   res.json({ updates: db.getUpdates() });
 });
@@ -1048,6 +1228,10 @@ apiRouter.put('/admin/providers/:id/toggle', requireAuth, requireAdmin, (req, re
 apiRouter.get('/admin/errors', requireAuth, requireAdmin, (req, res) => {
   const logs = db.getPlaybackLogs();
   res.json({ logs });
+});
+
+apiRouter.get('/admin/feedback', requireAuth, requireAdmin, (req, res) => {
+  res.json({ feedback: db.getFeedback() });
 });
 
 // Client playback error telemetry endpoint

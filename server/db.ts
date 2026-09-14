@@ -15,6 +15,7 @@ import {
   PlaybackLog,
   ProviderConfig,
   AppUpdate,
+  UserFeedback,
 } from './types';
 
 interface DatabaseSchema {
@@ -30,6 +31,7 @@ interface DatabaseSchema {
   playbackLogs: PlaybackLog[];
   providers: ProviderConfig[];
   updates: AppUpdate[];
+  feedback: UserFeedback[];
 }
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
@@ -1010,6 +1012,7 @@ class Database {
           playbackLogs: parsed.playbackLogs || [],
           providers: parsed.providers || initialProviders,
           updates: parsed.updates || [],
+          feedback: parsed.feedback || [],
         };
       }
     } catch (err) {
@@ -1034,6 +1037,7 @@ class Database {
       playbackLogs: [],
       providers: [...initialProviders],
       updates: [],
+      feedback: [],
     };
   }
 
@@ -1417,6 +1421,25 @@ class Database {
       return true;
     }
     return false;
+  }
+
+  // User feedback (user write, admin read)
+  public getFeedback(): UserFeedback[] {
+    return [...(this.data.feedback || [])].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  public createFeedback(feedback: Omit<UserFeedback, 'id' | 'createdAt'>): UserFeedback {
+    const newFeedback: UserFeedback = {
+      id: `feedback-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      createdAt: new Date().toISOString(),
+      ...feedback,
+    };
+    if (!this.data.feedback) this.data.feedback = [];
+    this.data.feedback.unshift(newFeedback);
+    this.save();
+    return newFeedback;
   }
 }
 

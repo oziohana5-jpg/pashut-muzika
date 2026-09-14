@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Users, Music, Disc3, Radio, Server, AlertTriangle, RefreshCw, Bell, Plus, Trash2 } from 'lucide-react';
-import { AdminStats, User, ProviderConfig, PlaybackLog, AppUpdate } from '../types';
+import { Shield, Users, Music, Disc3, Radio, Server, AlertTriangle, RefreshCw, Bell, Plus, Trash2, MessageSquare } from 'lucide-react';
+import { AdminStats, User, ProviderConfig, PlaybackLog, AppUpdate, UserFeedback } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -13,6 +13,7 @@ export const AdminDashboard: React.FC = () => {
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [logs, setLogs] = useState<PlaybackLog[]>([]);
   const [updates, setUpdates] = useState<AppUpdate[]>([]);
+  const [feedback, setFeedback] = useState<UserFeedback[]>([]);
   const [updateTitle, setUpdateTitle] = useState('');
   const [updateBody, setUpdateBody] = useState('');
   const [updateType, setUpdateType] = useState<AppUpdate['type']>('info');
@@ -29,13 +30,15 @@ export const AdminDashboard: React.FC = () => {
       fetch('/api/admin/providers', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
       fetch('/api/admin/errors', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
       fetch('/api/updates').then((r) => r.json()),
+      fetch('/api/admin/feedback', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
     ])
-      .then(([statsData, usersData, providersData, logsData, updatesData]) => {
+      .then(([statsData, usersData, providersData, logsData, updatesData, feedbackData]) => {
         setStats(statsData);
         setUsers(usersData.users || []);
         setProviders(providersData.providers || []);
         setLogs(logsData.logs || []);
         setUpdates(updatesData.updates || []);
+        setFeedback(feedbackData.feedback || []);
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
@@ -226,6 +229,35 @@ export const AdminDashboard: React.FC = () => {
             <button onClick={() => deleteUpdate(update.id)} className="shrink-0 rounded-lg p-2 text-zinc-500 transition hover:bg-rose-500/10 hover:text-rose-400" title="מחק עדכון"><Trash2 className="h-4 w-4" /></button>
           </div>)}
         </div>}
+      </section>
+
+      {/* User Feedback */}
+      <section className="space-y-4 rounded-2xl border border-emerald-500/20 bg-[#13151d] p-6">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-emerald-400">
+            <MessageSquare className="h-5 w-5" />
+            <div>
+              <h2 className="text-base font-bold text-white">פידבק מהמשתמשים ({feedback.length})</h2>
+              <p className="text-xs text-zinc-500">כל ההצעות וההודעות שנשלחו מטופס הפידבק בהגדרות.</p>
+            </div>
+          </div>
+          <button onClick={fetchAdminData} className="rounded-lg p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white" title="רענן פידבק"><RefreshCw className="h-4 w-4" /></button>
+        </div>
+        {feedback.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-white/10 py-8 text-center text-xs text-zinc-500">עדיין לא התקבל פידבק.</div>
+        ) : (
+          <div className="space-y-2">
+            {feedback.map((item) => (
+              <article key={item.id} className="rounded-xl border border-white/5 bg-white/[.02] p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div><p className="text-sm font-semibold text-white">{item.userName}</p><p className="text-[11px] text-zinc-500">{item.userEmail}</p></div>
+                  <time className="text-[11px] text-zinc-500">{new Date(item.createdAt).toLocaleString('he-IL')}</time>
+                </div>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{item.message}</p>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Music Providers Section */}

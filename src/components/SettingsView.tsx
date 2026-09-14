@@ -25,13 +25,14 @@ import {
   Download,
   Copy,
   ArrowDownToLine,
+  Award,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { usePlayer } from '../contexts/PlayerContext';
 
 export const SettingsView: React.FC = () => {
-  const { user, logout, updateProfile, changePassword, deleteAccount } = useAuth();
+  const { user, token, logout, updateProfile, changePassword, deleteAccount, openAuthModal } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { audioQuality, setAudioQuality } = usePlayer();
 
@@ -93,9 +94,23 @@ export const SettingsView: React.FC = () => {
     }
   };
 
-  const handleSendFeedback = (e: React.FormEvent) => {
+  const handleSendFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackText.trim()) return;
+    if (!token) {
+      openAuthModal('כדי לשלוח פידבק לצוות, יש להתחבר לחשבון.', 'login');
+      return;
+    }
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ message: feedbackText }),
+      });
+      if (!response.ok) return;
+    } catch {
+      return;
+    }
     setFeedbackSuccess(true);
     setFeedbackText('');
     setTimeout(() => setFeedbackSuccess(false), 4000);
@@ -615,6 +630,21 @@ export const SettingsView: React.FC = () => {
         <p className="text-xs text-zinc-400 leading-relaxed max-w-xl">
           {t('legalDisclaimer')}
         </p>
+      </section>
+
+      {/* Credits */}
+      <section id="settings-credits-section" className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-[#151824] to-[#11131a] border border-amber-400/20 space-y-5">
+        <div className="flex items-center gap-2.5 text-amber-300">
+          <Award className="w-5 h-5" />
+          <h2 className="text-base font-bold text-white">קרדיטים ותודות</h2>
+        </div>
+        <p className="text-sm leading-6 text-zinc-300">תודה לכל מי שעזר לנו לבנות את פשוט מוזיקה ולהפוך את הרעיון למציאות.</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm text-white"><strong className="block text-amber-300">Spotify</strong><span className="text-xs text-zinc-400">מקור השראה ושירותי קטלוג</span></div>
+          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm text-white"><strong className="block text-red-300">YouTube</strong><span className="text-xs text-zinc-400">קליפים רשמיים ומקורות וידאו</span></div>
+          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm text-white"><strong className="block text-blue-300">עוז אוחנה</strong><span className="text-xs text-zinc-400">המתכנת</span></div>
+          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm text-white"><strong className="block text-emerald-300">יונתן גרשקוביץ</strong><span className="text-xs text-zinc-400">יועץ ופיתוח האתר</span></div>
+        </div>
       </section>
 
       {/* iOS / PWA Guide Modal from Settings */}
