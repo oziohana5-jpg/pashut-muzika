@@ -133,8 +133,9 @@ export const SearchView: React.FC<SearchViewProps> = ({
   return (
     <div className="space-y-6 pb-28 pt-2 px-4 sm:px-8">
       {/* Search Input Bar */}
-      <div className="max-w-3xl space-y-3">
-        <div className="relative">
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-8 px-4 sm:px-8 pt-2 pb-3 bg-[#0a0b0e]/95 backdrop-blur-md border-b border-white/5">
+        <div className="max-w-3xl space-y-3">
+          <div className="relative">
           <div className="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none text-zinc-400">
             <SearchIcon className="w-5 h-5" />
           </div>
@@ -159,10 +160,10 @@ export const SearchView: React.FC<SearchViewProps> = ({
               <X className="w-5 h-5" />
             </button>
           )}
-        </div>
+          </div>
 
-        {/* Quick Suggestion Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          {/* Quick Suggestion Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
           <span className="text-xs text-zinc-500 shrink-0">
             {language === 'he' ? 'הצעות מהירות:' : 'Quick search:'}
           </span>
@@ -179,10 +180,10 @@ export const SearchView: React.FC<SearchViewProps> = ({
               {p.label}
             </button>
           ))}
-        </div>
+          </div>
 
-        {/* Filter Chips */}
-        <div className="flex items-center gap-2 pt-1 overflow-x-auto no-scrollbar">
+          {/* Filter Chips */}
+          <div className="flex items-center gap-2 pt-1 overflow-x-auto no-scrollbar">
           {(['all', 'songs', 'artists', 'albums', 'playlists'] as SearchFilter[]).map((tab) => (
             <button
               key={tab}
@@ -200,6 +201,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
               {tab === 'playlists' && t('searchFilterPlaylists')}
             </button>
           ))}
+          </div>
         </div>
       </div>
 
