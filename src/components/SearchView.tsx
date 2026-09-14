@@ -71,6 +71,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
         signal: controller.signal,
       });
       const data = await res.json();
+      if (controller.signal.aborted || searchAbortRef.current !== controller) return;
       setResults(data);
       searchCacheRef.current.set(cacheKey, data);
     } catch (err) {
@@ -78,7 +79,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
         console.error('Search error:', err);
       }
     } finally {
-      setLoading(false);
+      if (searchAbortRef.current === controller) setLoading(false);
     }
   };
 
@@ -204,11 +205,9 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
       {/* Loading state */}
       {loading && (
-        <div className="py-12 flex flex-col items-center justify-center gap-3 text-zinc-400">
-          <div className="w-7 h-7 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs">
-            {language === 'he' ? 'מחפש שירים ואמנים...' : 'Searching catalog...'}
-          </p>
+        <div className="flex items-center gap-2 text-xs text-zinc-500" role="status">
+          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+          <span>{language === 'he' ? 'מעדכן תוצאות...' : 'Updating results...'}</span>
         </div>
       )}
 
@@ -262,7 +261,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
       )}
 
       {/* Search Results Display */}
-      {query && !loading && hasResults && (
+      {query && hasResults && (
         <div className="space-y-8">
           {/* Songs Results */}
           {(filter === 'all' || filter === 'songs') && results.songs.length > 0 && (
