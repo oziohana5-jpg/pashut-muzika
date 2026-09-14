@@ -831,10 +831,24 @@ apiRouter.get('/playlists', (req, res) => {
 
 function spotifyPlaylistId(value: string): string | null {
   const trimmed = value.trim();
-  const webMatch = trimmed.match(/open\.spotify\.com\/(?:intl-[^/]+\/)?playlist\/([A-Za-z0-9]+)/i);
+  const webMatch = trimmed.match(/(?:open\.spotify\.com|spotify\.com)\/(?:intl-[^/]+\/)?playlist\/([A-Za-z0-9]+)/i);
   const uriMatch = trimmed.match(/^spotify:playlist:([A-Za-z0-9]+)$/i);
   const idMatch = trimmed.match(/^([A-Za-z0-9]{22})$/);
   return webMatch?.[1] || uriMatch?.[1] || idMatch?.[1] || null;
+}
+
+async function resolveSpotifyPlaylistId(value: string): Promise<string | null> {
+  const directId = spotifyPlaylistId(value);
+  if (directId) return directId;
+
+  try {
+    const parsed = new URL(value.trim());
+    if (parsed.hostname !== 'spotify.link' && parsed.hostname !== 'www.spotify.link') return null;
+    const response = await fetch(parsed.toString(), { redirect: 'follow' });
+    return spotifyPlaylistId(response.url);
+  } catch {
+    return null;
+  }
 }
 
 async function getSpotifyAccessToken(): Promise<string | null> {
@@ -860,9 +874,10 @@ async function getSpotifyAccessToken(): Promise<string | null> {
 }
 
 apiRouter.post('/playlists/import/spotify', requireAuth, async (req: AuthenticatedRequest, res) => {
-  const playlistId = spotifyPlaylistId(String(req.body?.url || ''));
+  const playlistUrl = String(req.body?.url || '');
+  const playlistId = await resolveSpotifyPlaylistId(playlistUrl);
   if (!playlistId) {
-    res.status(400).json({ error: 'יש להזין קישור תקין לפלייליסט ציבורי של Spotify.' });
+    res.status(400).json({ error: 'יש להדביק קישור מלא לפלייליסט ציבורי, למשל https://open.spotify.com/playlist/...' });
     return;
   }
 
@@ -884,6 +899,10 @@ apiRouter.post('/playlists/import/spotify', requireAuth, async (req: Authenticat
       { headers },
     );
     if (!playlistResponse.ok) {
+      if (playlistResponse.status === 401 || playlistResponse.status === 403) {
+        res.status(503).json({ error: 'Spotify חסמה את קריאת הפלייליסט לחשבון הזה. לפי Spotify, שימוש ב־Web API דורש חשבון Premium.' });
+        return;
+      }
       res.status(502).json({ error: 'לא ניתן לקרוא את הפלייליסט. ודא שהוא ציבורי והקישור תקין.' });
       return;
     }
