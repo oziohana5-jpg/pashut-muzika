@@ -509,8 +509,8 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
                 ) : lyrics.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-3 text-zinc-400">
                     <Mic2 className="w-9 h-9 text-zinc-500 stroke-[1.5]" />
-                    <p className="text-sm font-semibold text-zinc-200">לא נמצאו מילים מסונכרנות לשיר זה כרגע</p>
-                    <p className="text-xs text-zinc-500 max-w-xs">ניתן להמשיך להאזין לשיר באיכות גבוהה או לעבור לתצוגת התקליט</p>
+                    <p className="text-center text-sm font-semibold text-zinc-200">כתוביות מסונכרנות לא זמינות לשיר הזה כרגע</p>
+                    <p className="max-w-xs text-center text-xs leading-5 text-zinc-500">אנחנו מציגים רק מילים שנבדקו והתאימו לשיר. נתקלת בבעיה? שלחו לנו פידבק דרך הגדרות האתר.</p>
                   </div>
                 ) : (
                   <div className="space-y-4 py-2">

@@ -88,6 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(data.token);
       setUser(data.user);
       localStorage.setItem('simply_music_token', data.token);
+      if (!data.user.preferences?.completed) {
+        localStorage.setItem('simply_music_onboarding_pending', 'true');
+      }
       closeAuthModal();
       return { success: true };
     } catch (err: any) {
@@ -112,6 +115,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(data.token);
       setUser(data.user);
       localStorage.setItem('simply_music_token', data.token);
+      if (!data.user.preferences?.completed) {
+        localStorage.setItem('simply_music_onboarding_pending', 'true');
+      }
       closeAuthModal();
       return { success: true };
     } catch (err: any) {
@@ -133,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(data.token);
       setUser(data.user);
       localStorage.setItem('simply_music_token', data.token);
+      localStorage.setItem('simply_music_onboarding_pending', 'true');
       closeAuthModal();
       return { success: true };
     } catch (err: any) {

@@ -154,6 +154,17 @@ apiRouter.get('/auth/me', requireAuth, (req: AuthenticatedRequest, res) => {
   res.json({ user: sanitizeUser(req.user!) });
 });
 
+apiRouter.put('/auth/preferences', requireAuth, (req: AuthenticatedRequest, res) => {
+  const artistIds = Array.isArray(req.body?.artistIds) ? req.body.artistIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 5) : [];
+  const genres = Array.isArray(req.body?.genres) ? req.body.genres.filter((genre: unknown): genre is string => typeof genre === 'string').slice(0, 5) : [];
+  const updated = db.updateUser(req.user!.id, { preferences: { artistIds, genres, completed: true } });
+  if (!updated) {
+    res.status(500).json({ error: 'Failed to save music preferences.' });
+    return;
+  }
+  res.json({ user: sanitizeUser(updated) });
+});
+
 // Edit profile
 apiRouter.put('/auth/profile', requireAuth, (req: AuthenticatedRequest, res) => {
   const { displayName, username, avatarUrl } = req.body;
@@ -711,6 +722,11 @@ apiRouter.get('/music/recommendations', async (req: AuthenticatedRequest, res) =
     const likedIds = db.getLikedSongs(userId);
     const liked = likedIds.map(id => db.getSongById(id)).filter((s): s is Song => Boolean(s));
     favoriteGenres = Array.from(new Set(liked.map(s => s.genre)));
+    const preferences = userId ? db.getUserById(userId)?.preferences : undefined;
+    if (preferences) {
+      favoriteGenres = Array.from(new Set([...preferences.genres, ...favoriteGenres]));
+      followedArtistIds = Array.from(new Set([...preferences.artistIds, ...followedArtistIds]));
+    }
   }
 
   let recommendedTracks = allSongs;

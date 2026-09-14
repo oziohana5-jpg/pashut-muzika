@@ -9,6 +9,13 @@ export interface User {
   disabled: boolean;
   createdAt: string;
   updatedAt: string;
+  preferences?: UserPreferences;
+}
+
+export interface UserPreferences {
+  artistIds: string[];
+  genres: string[];
+  completed: boolean;
 }
 
 export interface AppUpdate {

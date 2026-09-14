@@ -30,6 +30,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { UpdatesView } from './components/UpdatesView';
 import { DownloadsView } from './components/DownloadsView';
 import { NotificationPermissionPrompt } from './components/NotificationPermissionPrompt';
+import { MusicPreferencesModal } from './components/MusicPreferencesModal';
 
 const MainApp: React.FC = () => {
   const { direction } = useLanguage();
@@ -62,6 +63,7 @@ const MainApp: React.FC = () => {
   // Modals
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
   const [isSpotifyImportOpen, setIsSpotifyImportOpen] = useState(false);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isApkModalOpen, setIsApkModalOpen] = useState(false);
   const [apkModalInitialTab, setApkModalInitialTab] = useState<'windows' | 'website' | 'android' | 'ios'>('windows');
 
@@ -95,6 +97,12 @@ const MainApp: React.FC = () => {
   useEffect(() => {
     loadUserPlaylists();
   }, [token]);
+
+  useEffect(() => {
+    if (user && localStorage.getItem('simply_music_onboarding_pending') === 'true') {
+      setIsPreferencesOpen(true);
+    }
+  }, [user]);
 
   const navigateTo = (newView: ActiveView) => {
     setViewHistory((prev) => [...prev, activeView]);
@@ -295,6 +303,8 @@ const MainApp: React.FC = () => {
           handleNavigatePlaylist(newId);
         }}
       />
+
+      <MusicPreferencesModal isOpen={isPreferencesOpen} onClose={() => setIsPreferencesOpen(false)} />
 
       {/* Multi-Platform (Windows Desktop, APK, iOS, Web) Download Modal */}
       <AndroidApkModal
