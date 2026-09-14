@@ -778,7 +778,7 @@ export class LicensedCatalogProvider implements MusicProvider {
       }
     }
 
-    const allTracks = db.getSongs().filter(s => {
+    let allTracks = db.getSongs().filter(s => {
       if (s.artistId === artistId || s.artistId === decodedArtistId) return true;
       try {
         return decodeURIComponent(s.artistId) === decodedArtistId;
@@ -786,6 +786,63 @@ export class LicensedCatalogProvider implements MusicProvider {
         return false;
       }
     });
+
+    // A local artist can have only a few seeded tracks. Fill the profile from
+    // the public iTunes catalog so artist pages are not limited to the local
+    // popular-song sample.
+    if (artist && allTracks.length < 10 && !artistId.startsWith('jamendo-')) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(artist.name)}&entity=song&limit=200`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+          const catalog = await response.json() as { results?: any[] };
+          for (const item of catalog.results || []) {
+            if (!item.trackId || !item.trackName || !item.artistName) continue;
+            const songId = `itunes-${item.trackId}`;
+            const coverUrl = item.artworkUrl100?.replace('100x100bb', '600x600bb') || artist.imageUrl;
+            const song: Song = {
+              id: songId,
+              title: item.trackName,
+              titleHe: item.trackName,
+              artistId,
+              artistName: item.artistName,
+              albumId: `itunes-alb-${item.collectionId || item.trackId}`,
+              albumName: item.collectionName || 'Single',
+              coverUrl,
+              duration: Math.round((item.trackTimeMillis || 215000) / 1000),
+              releaseDate: item.releaseDate?.substring(0, 10) || '2024-01-01',
+              genre: item.primaryGenreName || artist.genres[0] || 'Music',
+              streamUrl: item.previewUrl || '',
+              provider: 'licensed_catalog',
+              audioFormat: 'aac',
+              bitrate: 256,
+              plays: 0,
+              isFullLength: true,
+              licenseInfo: 'Licensed Catalog Metadata',
+            };
+            db.upsertSong(song);
+            if (!allTracks.some(existing => existing.id === song.id)) allTracks.push(song);
+            if (item.collectionName && !db.getAlbumById(song.albumId)) {
+              db.upsertAlbum({
+                id: song.albumId,
+                title: item.collectionName,
+                titleHe: item.collectionName,
+                artistId,
+                artistName: item.artistName,
+                coverUrl,
+                releaseYear: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 2024,
+                genres: [song.genre],
+                trackCount: item.trackCount || 1,
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Could not expand artist catalog:', error);
+      }
+    }
     if (!artist && allTracks.length > 0) {
       const firstTrack = allTracks[0];
       artist = {

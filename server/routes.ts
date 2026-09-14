@@ -834,7 +834,8 @@ function spotifyPlaylistId(value: string): string | null {
   const webMatch = trimmed.match(/(?:open\.spotify\.com|spotify\.com)\/(?:intl-[^/]+\/)?playlist\/([A-Za-z0-9]+)/i);
   const uriMatch = trimmed.match(/^spotify:playlist:([A-Za-z0-9]+)$/i);
   const idMatch = trimmed.match(/^([A-Za-z0-9]{22})$/);
-  return webMatch?.[1] || uriMatch?.[1] || idMatch?.[1] || null;
+  const sharedIdMatch = trimmed.match(/(?:^|[^A-Za-z0-9])([A-Za-z0-9]{22})(?=[?:&\s]|$)/);
+  return webMatch?.[1] || uriMatch?.[1] || idMatch?.[1] || sharedIdMatch?.[1] || null;
 }
 
 async function resolveSpotifyPlaylistId(value: string): Promise<string | null> {
