@@ -56,7 +56,7 @@ export const EmojiConfetti: React.FC = () => {
         drift: -50 + Math.random() * 100,
         fallDistance,
       }));
-      setPieces((current) => [...current, ...burst].slice(-36));
+      setPieces((current) => [...current, ...burst]);
       window.setTimeout(() => {
         setPieces((current) => current.filter((piece) => !burst.some((item) => item.id === piece.id)));
       }, 9000);
