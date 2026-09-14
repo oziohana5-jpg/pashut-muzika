@@ -2,8 +2,8 @@ name: Keep Render Alive
 
 on:
   schedule:
-    # Runs every 5 minutes - keeps Render free instance from sleeping
-    - cron: '*/5 * * * *'
+    # Render free services sleep after inactivity; this external check wakes them.
+    - cron: '*/10 * * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
@@ -12,7 +12,9 @@ jobs:
     steps:
       - name: Ping Simply Music
         run: |
-          echo "Pinging Simply Music to keep it alive..."
-          curl -s -o /dev/null -w "HTTP Status: %{http_code}" https://pashut-muzika.onrender.com/
-          echo ""
-          echo "Ping sent at $(date)"
+          set -euo pipefail
+          URL="https://pashut-muzika.onrender.com/api/health"
+          echo "Pinging ${URL}..."
+          curl --fail --silent --show-error --max-time 45 --retry 2 --retry-delay 5 \
+            --output /dev/null --write-out "HTTP status: %{http_code}\n" "${URL}"
+          echo "Health check completed at $(date -u)"

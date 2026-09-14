@@ -9,7 +9,7 @@ import { db } from './server/db';
 async function startServer() {
   await db.ready;
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Body parsers
   app.use(express.json());

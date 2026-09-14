@@ -35,11 +35,13 @@ git push -u origin main
    - **Runtime:** `Node`
    - **Build Command:** `npm install && npm run build`
    - **Start Command:** `npm start`
-   - **Instance Type:** `Free`
+   - **Instance Type:** `Free` (may sleep after inactivity; use a paid instance for guaranteed always-on uptime)
 5. בלשונית **Environment Variables**, הוסף (או אשר):
    - `NODE_ENV`: `production`
    - `PORT`: `3000`
    - `JWT_SECRET`: מחרוזת אקראית כלשהי לאבטחת התחברות
 6. לחץ על **Create Web Service**!
+
+המאגר כולל GitHub Actions workflow בשם `Keep Render Alive` שמבצע בדיקת `/api/health` חיצונית כל 10 דקות. יש לוודא ש־GitHub Actions מופעל ושכתובת Render בקובץ `.github/workflows/keep-alive.yml` תואמת לכתובת השירות שלך. Render עדיין רשאי לישון, ולכן זמינות רציפה מובטחת רק בתוכנית שאינה Free.
 
 תוך 2-3 דקות האתר שלך יהיה באוויר עם כתובת רשמית של Render (למשל: `https://simply-music.onrender.com`), עם תמיכה מלאה בהשמעת שירים, מילים מסונכרנות אותנטיות, התחברות משתמשים ונגן מתקדם!
