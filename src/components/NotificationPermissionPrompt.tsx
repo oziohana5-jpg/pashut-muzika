@@ -4,6 +4,39 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 const PROMPT_SEEN_KEY = 'simply_music_notification_prompt_seen';
 
+async function subscribeToPush(): Promise<void> {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    // Check if already subscribed
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) return; // already subscribed
+
+    // Fetch VAPID public key from server
+    const res = await fetch('/api/push/vapid-public-key');
+    if (!res.ok) return;
+    const { publicKey } = await res.json() as { publicKey: string };
+
+    // Convert base64url to Uint8Array
+    const padding = '='.repeat((4 - (publicKey.length % 4)) % 4);
+    const base64 = (publicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawKey = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: rawKey,
+    });
+
+    // Send subscription to server
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(subscription.toJSON()),
+    });
+  } catch (err) {
+    console.warn('[push] subscribe failed:', err);
+  }
+}
+
 export const NotificationPermissionPrompt: React.FC = () => {
   const { language } = useLanguage();
   const [visible, setVisible] = useState(false);
@@ -16,6 +49,13 @@ export const NotificationPermissionPrompt: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, []);
 
+  // If permission already granted on mount, subscribe silently
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+      subscribeToPush();
+    }
+  }, []);
+
   const close = () => {
     localStorage.setItem(PROMPT_SEEN_KEY, 'true');
     setVisible(false);
@@ -24,7 +64,10 @@ export const NotificationPermissionPrompt: React.FC = () => {
   const requestPermission = async () => {
     if (!('Notification' in window)) return close();
     setRequesting(true);
-    await Notification.requestPermission();
+    const result = await Notification.requestPermission();
+    if (result === 'granted' && 'serviceWorker' in navigator) {
+      await subscribeToPush();
+    }
     setRequesting(false);
     close();
   };

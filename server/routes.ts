@@ -4,6 +4,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import webpush from 'web-push';
 import { db, hashPassword, verifyPassword } from './db';
 import { defaultMusicProvider, enrichArtistFromSpotify, musicService, resolveYouTubeForTrack } from './musicProvider';
 import {
@@ -17,6 +18,11 @@ import { Song, User } from './types';
 import { getSongLyrics } from '../src/data/lyricsData';
 
 export const apiRouter = Router();
+
+// ─── Web Push VAPID setup ────────────────────────────────────────────────────
+const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || 'BE2z16u_ITcqpes2-SC7b-zkeOeXXZn8IzQlFFtnHZaYqN06X36D6IA27F8kpgsgksHuqwp3fBfbNLr-7LDPOiA';
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || 'CH0WRiUpMJTlxDFDqwCeDbJoCI-5KVBvriWVxbmz3kM';
+webpush.setVapidDetails('mailto:admin@simplymusic.app', VAPID_PUBLIC, VAPID_PRIVATE);
 
 // Helper to remove passwordHash from user object
 function sanitizeUser(user: User) {
@@ -1247,7 +1253,7 @@ apiRouter.get('/updates', (req, res) => {
   res.json({ updates: db.getUpdates() });
 });
 
-apiRouter.post('/admin/updates', requireAuth, requireAdmin, (req: AuthenticatedRequest, res) => {
+apiRouter.post('/admin/updates', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res) => {
   const title = String(req.body.title || '').trim();
   const body = String(req.body.body || '').trim();
   const type = String(req.body.type || 'info');
@@ -1268,7 +1274,51 @@ apiRouter.post('/admin/updates', requireAuth, requireAdmin, (req: AuthenticatedR
     type: type as 'info' | 'feature' | 'fix' | 'important',
     authorName: req.user!.displayName || req.user!.username,
   });
+
+  // Send Web Push to all subscribers
+  const subs = db.getPushSubscriptions();
+  const payload = JSON.stringify({ title, body: body.slice(0, 140), icon: '/icon-192.png', tag: update.id });
+  const results = await Promise.allSettled(
+    subs.map(sub =>
+      webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: sub.keys },
+        payload
+      ).catch(async (err: any) => {
+        // 410 = subscription expired/unsubscribed — remove it
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          db.removePushSubscription(sub.endpoint);
+        }
+        throw err;
+      })
+    )
+  );
+  const sent = results.filter(r => r.status === 'fulfilled').length;
+  console.log(`[push] Sent update "${title}" to ${sent}/${subs.length} subscribers`);
+
   res.status(201).json({ update });
+});
+
+// VAPID public key — frontend needs this to subscribe
+apiRouter.get('/push/vapid-public-key', (_req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC });
+});
+
+// Save push subscription
+apiRouter.post('/push/subscribe', (req, res) => {
+  const { endpoint, keys } = req.body;
+  if (!endpoint || !keys?.p256dh || !keys?.auth) {
+    res.status(400).json({ error: 'Invalid subscription' });
+    return;
+  }
+  db.savePushSubscription({ endpoint, keys, createdAt: new Date().toISOString() });
+  res.status(201).json({ ok: true });
+});
+
+// Remove push subscription
+apiRouter.post('/push/unsubscribe', (req, res) => {
+  const { endpoint } = req.body;
+  if (endpoint) db.removePushSubscription(endpoint);
+  res.json({ ok: true });
 });
 
 apiRouter.delete('/admin/updates/:id', requireAuth, requireAdmin, (req, res) => {

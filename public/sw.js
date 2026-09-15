@@ -44,3 +44,36 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// ─── Web Push ────────────────────────────────────────────────────────────────
+self.addEventListener('push', (event) => {
+  let data = { title: 'פשוט מוזיקה', body: 'יש עדכון חדש!', icon: '/icon-192.png', tag: 'update' };
+  try {
+    if (event.data) data = { ...data, ...JSON.parse(event.data.text()) };
+  } catch {}
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon,
+      badge: '/icon-192.png',
+      tag: data.tag,
+      renotify: true,
+      dir: 'rtl',
+      lang: 'he',
+    })
+  );
+});
+
+// Click on notification → open the app
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url && 'focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow('/');
+    })
+  );
+});

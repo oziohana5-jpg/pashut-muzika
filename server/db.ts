@@ -18,6 +18,12 @@ import {
   UserFeedback,
 } from './types';
 
+export interface PushSubscriptionRecord {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  createdAt: string;
+}
+
 interface DatabaseSchema {
   users: User[];
   artists: Artist[];
@@ -32,6 +38,7 @@ interface DatabaseSchema {
   providers: ProviderConfig[];
   updates: AppUpdate[];
   feedback: UserFeedback[];
+  pushSubscriptions: PushSubscriptionRecord[];
 }
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
@@ -1441,6 +1448,29 @@ class Database {
     this.data.feedback.unshift(newFeedback);
     this.save();
     return newFeedback;
+  }
+
+  // Push subscriptions (Web Push VAPID)
+  public getPushSubscriptions(): PushSubscriptionRecord[] {
+    return this.data.pushSubscriptions || [];
+  }
+
+  public savePushSubscription(sub: PushSubscriptionRecord): void {
+    if (!this.data.pushSubscriptions) this.data.pushSubscriptions = [];
+    // Avoid duplicates — replace by endpoint
+    this.data.pushSubscriptions = this.data.pushSubscriptions.filter(
+      s => s.endpoint !== sub.endpoint
+    );
+    this.data.pushSubscriptions.push(sub);
+    this.save();
+  }
+
+  public removePushSubscription(endpoint: string): void {
+    if (!this.data.pushSubscriptions) return;
+    this.data.pushSubscriptions = this.data.pushSubscriptions.filter(
+      s => s.endpoint !== endpoint
+    );
+    this.save();
   }
 }
 
