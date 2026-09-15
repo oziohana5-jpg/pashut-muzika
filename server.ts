@@ -7,7 +7,6 @@ import { apiRouter } from './server/routes';
 import { db } from './server/db';
 
 async function startServer() {
-  await db.ready;
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
@@ -111,6 +110,10 @@ async function startServer() {
     console.log(`Simply Music server running on http://0.0.0.0:${PORT}`);
     startKeepAlive(PORT);
   });
+
+  // Start serving health checks and static assets immediately. MongoDB is
+  // optional persistence and can finish connecting without blocking startup.
+  await db.ready;
 }
 
 // Self-ping every 3 minutes to prevent Render free tier from sleeping
