@@ -1,7 +1,6 @@
 // Simply Music Lightweight Service Worker
-const CACHE_NAME = 'simply-music-v1';
+const CACHE_NAME = 'simply-music-v2';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
@@ -38,6 +37,14 @@ self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('/api/') || event.request.url.includes('/stream/')) {
     return;
   }
+
+  // Never serve a stale HTML shell after a deployment. Hashed JS bundles can
+  // change between deploys, so an old index.html can otherwise render blank.
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     fetch(event.request).catch(() => {
       return caches.match(event.request);
