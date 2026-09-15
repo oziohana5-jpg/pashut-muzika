@@ -34,6 +34,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import { themes, useTheme } from '../contexts/ThemeContext';
 import { ActiveTab } from '../types';
+import { subscribeToPush } from '../utils/pushNotifications';
 
 interface SettingsViewProps {
   onNavigateTab?: (tab: ActiveTab) => void;
@@ -99,28 +100,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onNavigateTab }) => 
     setBrowserNotificationPermission(permission);
     if (permission === 'granted') {
       localStorage.setItem('simply_music_browser_notifications', 'true');
-      // Subscribe to real Web Push
-      try {
-        const reg = await navigator.serviceWorker.ready;
-        const existing = await reg.pushManager.getSubscription();
-        if (!existing) {
-          const res = await fetch('/api/push/vapid-public-key');
-          if (res.ok) {
-            const { publicKey } = await res.json() as { publicKey: string };
-            const padding = '='.repeat((4 - (publicKey.length % 4)) % 4);
-            const base64 = (publicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
-            const rawKey = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-            const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: rawKey });
-            await fetch('/api/push/subscribe', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(sub.toJSON()),
-            });
-          }
-        }
-      } catch (err) {
-        console.warn('[push] subscribe failed:', err);
-      }
+      await subscribeToPush();
     }
   };
 

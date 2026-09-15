@@ -1,41 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, Check, X } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { subscribeToPush } from '../utils/pushNotifications';
 
 const PROMPT_SEEN_KEY = 'simply_music_notification_prompt_seen';
-
-async function subscribeToPush(): Promise<void> {
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    // Check if already subscribed
-    const existing = await reg.pushManager.getSubscription();
-    if (existing) return; // already subscribed
-
-    // Fetch VAPID public key from server
-    const res = await fetch('/api/push/vapid-public-key');
-    if (!res.ok) return;
-    const { publicKey } = await res.json() as { publicKey: string };
-
-    // Convert base64url to Uint8Array
-    const padding = '='.repeat((4 - (publicKey.length % 4)) % 4);
-    const base64 = (publicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawKey = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-
-    const subscription = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: rawKey,
-    });
-
-    // Send subscription to server
-    await fetch('/api/push/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(subscription.toJSON()),
-    });
-  } catch (err) {
-    console.warn('[push] subscribe failed:', err);
-  }
-}
 
 export const NotificationPermissionPrompt: React.FC = () => {
   const { language } = useLanguage();
