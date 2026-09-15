@@ -321,55 +321,59 @@ function generateFeedback(count: number): SimFeedback[] {
   return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-// ─── Simulated audience count — starts at 2045 and grows every two hours ─────
+// ─── Simulated connected users — smooth movement by time of day ─────────────
 
-const BASE_COUNT = 2045;
-const GROWTH_INTERVAL_MS = 2 * 60 * 60 * 1000;
-const COUNT_STORAGE_KEY = 'simply_music_audience_count';
+interface OnlineRange { min: number; max: number; }
+const ONLINE_COUNT_STORAGE_KEY = 'simply_music_connected_users';
 
-function growthForSlot(slot: number): number {
-  return 1 + Math.floor(seededRand(slot * 7919 + 31337)() * 5);
+function getOnlineRange(date = new Date()): OnlineRange {
+  const hour = date.getHours() + date.getMinutes() / 60;
+
+  if (hour >= 5.5 && hour < 8.5) return { min: 20, max: 128 };
+  if (hour >= 8.5 && hour < 12) return { min: 80, max: 368 };
+  if (hour >= 12 && hour < 24) return { min: 100, max: 678 };
+  return { min: 20, max: 100 };
 }
 
-function getSimulatedCount(): number {
-  const currentSlot = Math.floor(Date.now() / GROWTH_INTERVAL_MS);
-  let count = BASE_COUNT;
-  let savedSlot = currentSlot;
-
-  if (typeof window !== 'undefined') {
-    try {
-      const saved = JSON.parse(localStorage.getItem(COUNT_STORAGE_KEY) || 'null') as { count?: number; slot?: number } | null;
-      if (saved && Number.isFinite(saved.count) && Number.isFinite(saved.slot)) {
-        count = Math.max(BASE_COUNT, Math.floor(saved.count!));
-        savedSlot = Math.floor(saved.slot!);
-      }
-    } catch {
-      // Use the base count when local storage is unavailable or invalid.
-    }
-  }
-
-  if (savedSlot > currentSlot) savedSlot = currentSlot;
-  for (let slot = savedSlot; slot < currentSlot; slot += 1) {
-    count += growthForSlot(slot + 1);
-  }
-
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(COUNT_STORAGE_KEY, JSON.stringify({ count, slot: currentSlot }));
-    } catch {
-      // Counting still works for the current session without storage.
-    }
-  }
-
-  return count;
+function randomTarget(range: OnlineRange): number {
+  return range.min + Math.floor(noiseRand() * (range.max - range.min + 1));
 }
 
-function computeNext(): number {
-  return getSimulatedCount();
+function getSavedOnlineCount(): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(ONLINE_COUNT_STORAGE_KEY) || 'null') as { count?: number } | null;
+    return saved && Number.isFinite(saved.count) ? Math.floor(saved.count!) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveOnlineCount(count: number): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(ONLINE_COUNT_STORAGE_KEY, JSON.stringify({ count }));
+  } catch {
+    // The live count still works for the current session without storage.
+  }
 }
 
 function initialCount(): number {
-  return getSimulatedCount();
+  const range = getOnlineRange();
+  const saved = getSavedOnlineCount();
+  if (saved !== null) return Math.max(range.min, Math.min(range.max, saved));
+  return randomTarget(range);
+}
+
+function computeNext(current: number): number {
+  const range = getOnlineRange();
+  const target = randomTarget(range);
+  const distance = target - current;
+  const step = Math.min(Math.max(1, Math.floor(noiseRand() * 5) + 1), Math.abs(distance));
+  const next = distance === 0 ? current : current + Math.sign(distance) * step;
+  const bounded = Math.max(range.min, Math.min(range.max, next));
+  saveOnlineCount(bounded);
+  return bounded;
 }
 
 // ─── Live position helper ─────────────────────────────────────────────────────
@@ -419,10 +423,10 @@ export function useOnlineUsers(): OnlineUsersState {
     setUsers(assignSongs(countRef.current));
     setIsLoaded(true);
 
-    // Count tick: every 3–6 s (small drift only)
+    // Count tick: every 10 seconds, with a gradual rise or fall of 1–5 users.
     let countTimer: ReturnType<typeof setTimeout>;
     const tickCount = () => {
-      const next = computeNext();
+      const next = computeNext(countRef.current);
       countRef.current = next;
       setCount(next);
       setUsers(prev => {
@@ -430,9 +434,9 @@ export function useOnlineUsers(): OnlineUsersState {
         if (next > prev.length)  return [...prev, ...assignSongs(next).slice(prev.length)];
         return prev.slice(0, next);
       });
-      countTimer = setTimeout(tickCount, 3_000 + Math.floor(noiseRand2() * 3_000));
+      countTimer = setTimeout(tickCount, 10_000);
     };
-    countTimer = setTimeout(tickCount, 4_000);
+    countTimer = setTimeout(tickCount, 10_000);
 
     // Song rotation: every ~30 s, ~15% of users change track
     let songTimer: ReturnType<typeof setTimeout>;
