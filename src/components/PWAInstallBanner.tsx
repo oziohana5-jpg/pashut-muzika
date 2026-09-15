@@ -89,15 +89,6 @@ export const PWAInstallBanner: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <a
-              id="btn-banner-download-apk"
-              href="/api/download/apk"
-              download="simply-music.apk"
-              className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-md shadow-emerald-600/20 active:scale-95 transition cursor-pointer"
-              title="הורדת קובץ APK לאנדרואיד"
-            >
-              הורד APK
-            </a>
             <button
               id="btn-install-pwa"
               onClick={handleInstallClick}

@@ -321,61 +321,55 @@ function generateFeedback(count: number): SimFeedback[] {
   return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-// ─── Time-based count — base at 1005, gradual rise every 30 min ──────────────
+// ─── Simulated audience count — starts at 2045 and grows every two hours ─────
 
-const BASE_COUNT = 1005;
+const BASE_COUNT = 2045;
+const GROWTH_INTERVAL_MS = 2 * 60 * 60 * 1000;
+const COUNT_STORAGE_KEY = 'simply_music_audience_count';
 
-interface HourSlot { min: number; max: number; }
-function getHourSlot(h: number): HourSlot {
-  // All slots shifted up to be around 1005 base
-  if (h < 5)  return { min: 820,  max: 920  };
-  if (h < 7)  return { min: 900,  max: 1050 };
-  if (h < 9)  return { min: 1050, max: 1250 };
-  if (h < 12) return { min: 980,  max: 1180 };
-  if (h < 14) return { min: 930,  max: 1080 };
-  if (h < 17) return { min: 970,  max: 1150 };
-  if (h < 20) return { min: 1080, max: 1300 };
-  if (h < 23) return { min: 1000, max: 1200 };
-  return { min: 870, max: 990 };
+function growthForSlot(slot: number): number {
+  return 1 + Math.floor(seededRand(slot * 7919 + 31337)() * 5);
 }
 
-// Every 30 minutes: random increment of 1–3 listeners (slow organic growth)
-function getGrowthBonus(): number {
-  const halfHour = Math.floor(Date.now() / 1_800_000); // changes every 30 min
-  const r = seededRand(halfHour * 7919 + 31337);
-  // Each half-hour tick adds exactly 1, 2, or 3 listeners
-  return 1 + Math.floor(r() * 3);
+function getSimulatedCount(): number {
+  const currentSlot = Math.floor(Date.now() / GROWTH_INTERVAL_MS);
+  let count = BASE_COUNT;
+  let savedSlot = currentSlot;
+
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COUNT_STORAGE_KEY) || 'null') as { count?: number; slot?: number } | null;
+      if (saved && Number.isFinite(saved.count) && Number.isFinite(saved.slot)) {
+        count = Math.max(BASE_COUNT, Math.floor(saved.count!));
+        savedSlot = Math.floor(saved.slot!);
+      }
+    } catch {
+      // Use the base count when local storage is unavailable or invalid.
+    }
+  }
+
+  if (savedSlot > currentSlot) savedSlot = currentSlot;
+  for (let slot = savedSlot; slot < currentSlot; slot += 1) {
+    count += growthForSlot(slot + 1);
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(COUNT_STORAGE_KEY, JSON.stringify({ count, slot: currentSlot }));
+    } catch {
+      // Counting still works for the current session without storage.
+    }
+  }
+
+  return count;
 }
 
-let _noiseState2 = (Date.now() ^ 0xcafebabe) >>> 0;
-function noiseRand2(): number {
-  _noiseState2 = (Math.imul(_noiseState2, 1664525) + 1013904223) >>> 0;
-  return _noiseState2 / 0x100000000;
-}
-
-function gaussianNoise(std: number): number {
-  const u = (noiseRand2() + noiseRand2() + noiseRand2()) / 3;
-  return (u - 0.5) * 2 * std;
-}
-
-function computeNext(current: number): number {
-  const slot  = getHourSlot(new Date().getHours());
-  const bonus = getGrowthBonus();
-  const target = Math.min(slot.max + bonus, slot.max);
-  const mid   = (slot.min + target) / 2;
-  const range = target - slot.min;
-  const pull  = (mid - current) * 0.06;
-  const noise = gaussianNoise(range * 0.04); // תנודה קטנה — טבעי
-  const spike = noiseRand2() < 0.04
-    ? (noiseRand2() * range * 0.08) * (noiseRand2() > 0.5 ? 1 : -1)
-    : 0;
-  return Math.max(slot.min, Math.min(slot.max + bonus, Math.round(current + pull + noise + spike)));
+function computeNext(): number {
+  return getSimulatedCount();
 }
 
 function initialCount(): number {
-  const slot  = getHourSlot(new Date().getHours());
-  const bonus = getGrowthBonus();
-  return Math.round((slot.min + slot.max) / 2 + bonus + gaussianNoise((slot.max - slot.min) * 0.10));
+  return getSimulatedCount();
 }
 
 // ─── Live position helper ─────────────────────────────────────────────────────
@@ -428,7 +422,7 @@ export function useOnlineUsers(): OnlineUsersState {
     // Count tick: every 3–6 s (small drift only)
     let countTimer: ReturnType<typeof setTimeout>;
     const tickCount = () => {
-      const next = computeNext(countRef.current);
+      const next = computeNext();
       countRef.current = next;
       setCount(next);
       setUsers(prev => {

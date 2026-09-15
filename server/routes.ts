@@ -1680,72 +1680,9 @@ apiRouter.get(['/download/windows-zip', '/simply-music-windows.zip'], (req, res)
   res.redirect('/#install-windows');
 });
 
-// ==========================================
-// ANDROID APK DIRECT DOWNLOAD & BASE64 API
-// ==========================================
-apiRouter.get('/download/apk-data', (req, res) => {
-  const publicApk = path.join(process.cwd(), 'public', 'simply-music.apk');
-  const dataApk = path.join(process.cwd(), 'data', 'simply-music.apk');
-  const targetApk = fs.existsSync(publicApk) ? publicApk : (fs.existsSync(dataApk) ? dataApk : null);
-
-  if (!targetApk) {
-    res.status(404).json({ error: 'קובץ APK לא נמצא' });
-    return;
-  }
-
-  const fileBuf = fs.readFileSync(targetApk);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.json({
-    filename: 'simply-music.apk',
-    size: fileBuf.length,
-    base64: fileBuf.toString('base64'),
-    mirrorLinks: {
-      gofile: 'https://gofile.io/d/UxjvHA2G',
-      filebinZip: 'https://filebin.net/simplymusic2026/simply-music-apk.zip',
-    }
-  });
-});
-
-apiRouter.get(['/download/apk', '/download-apk', '/apk', '/simply-music.apk'], async (req, res) => {
-  const publicApk = path.join(process.cwd(), 'public', 'simply-music.apk');
-  const dataApk = path.join(process.cwd(), 'data', 'simply-music.apk');
-  let targetApk = fs.existsSync(publicApk) ? publicApk : (fs.existsSync(dataApk) ? dataApk : null);
-
-  if (!targetApk) {
-    try {
-      const { execSync } = await import('child_process');
-      execSync('python3 scripts/generate_apk_and_assets.py', { cwd: process.cwd() });
-      targetApk = fs.existsSync(publicApk) ? publicApk : (fs.existsSync(dataApk) ? dataApk : null);
-    } catch (e) {
-      console.error('Failed to regenerate APK on the fly:', e);
-    }
-  }
-
-  if (!targetApk) {
-    res.status(404).json({ error: 'קובץ ה-APK לא נמצא כרגע, אנא נסה שוב בעוד מספר שניות.' });
-    return;
-  }
-
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-  res.setHeader('Content-Disposition', 'attachment; filename="simply-music.apk"');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.sendFile(targetApk);
-});
-
-apiRouter.get(['/download/zip', '/simply-music-apk.zip'], (req, res) => {
-  const zipPath = path.join(process.cwd(), 'public', 'simply-music-apk.zip');
-  if (!fs.existsSync(zipPath)) {
-    res.status(404).json({ error: 'קובץ ZIP לא נמצא' });
-    return;
-  }
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', 'attachment; filename="simply-music-apk.zip"');
-  res.sendFile(zipPath);
+// APK downloads were removed. Keep old links explicit so they cannot regenerate files.
+apiRouter.get(['/download/apk-data', '/download/apk', '/download-apk', '/apk', '/simply-music.apk', '/download/zip', '/simply-music-apk.zip'], (_req, res) => {
+  res.status(410).json({ error: 'הורדת APK אינה זמינה יותר. ניתן להוסיף את האתר למסך הבית.' });
 });
 
 

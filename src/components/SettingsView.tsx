@@ -71,7 +71,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onNavigateTab }) => 
   // PWA install guide modal
   const [showPwaGuide, setShowPwaGuide] = useState(false);
   const [installedApp, setInstalledApp] = useState(false);
-  const [copiedApk, setCopiedApk] = useState(false);
 
   // Feedback form state
   const [feedbackText, setFeedbackText] = useState('');
@@ -492,7 +491,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onNavigateTab }) => 
         </>
       ) : null}
 
-      {/* Android APK & Home Screen Installation */}
+      {/* Home Screen Installation */}
       <section
         id="settings-pwa-section"
         className="p-6 rounded-2xl bg-gradient-to-br from-[#13151d] via-[#101926] to-[#0f1f1d] border border-emerald-500/30 space-y-5 shadow-xl shadow-emerald-950/20"
@@ -500,54 +499,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onNavigateTab }) => 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 text-emerald-400">
             <Smartphone className="w-5 h-5" />
-            <h2 className="text-base font-bold text-white">אפליקציה לאנדרואיד (APK) ומסך הבית</h2>
+            <h2 className="text-base font-bold text-white">הוספה למסך הבית</h2>
           </div>
-          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30">
-            APK Android v2.5
-          </span>
         </div>
 
         <p className="text-xs text-zinc-300 leading-relaxed max-w-xl">
-          הורד ישירות את קובץ ה-APK להתקנה מלאה במכשירי Android, או הוסף את האפליקציה למסך הבית. חוויית נגן מלאה, שירים באורך מלא וללא שום פרסומות!
+          הוסף את פשוט מוזיקה למסך הבית וקבל גישה מהירה לנגן בלי להוריד קבצים.
         </p>
 
-        {/* Action Buttons: Direct APK Download & Copy Link */}
+        {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-3 pt-1">
-          <a
-            id="btn-settings-download-apk"
-            href="/api/download/apk"
-            download="simply-music.apk"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 active:scale-95 transition cursor-pointer"
-          >
-            <ArrowDownToLine className="w-4 h-4" />
-            <span>הורד קובץ APK עכשיו (simply-music.apk)</span>
-          </a>
-
-          <button
-            id="btn-settings-copy-apk-link"
-            onClick={() => {
-              if (navigator.clipboard) {
-                const url = `${window.location.origin}/api/download/apk`;
-                navigator.clipboard.writeText(url);
-                setCopiedApk(true);
-                setTimeout(() => setCopiedApk(false), 3000);
-              }
-            }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-200 border border-white/10 text-xs font-semibold transition"
-          >
-            {copiedApk ? (
-              <>
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span className="text-emerald-400 font-bold">הקישור הועתק!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4 text-zinc-400" />
-                <span>העתק קישור ישיר להורדה</span>
-              </>
-            )}
-          </button>
-
           <button
             id="btn-settings-install-pwa"
             onClick={() => setShowPwaGuide(true)}
@@ -558,13 +519,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onNavigateTab }) => 
           </button>
         </div>
 
-        {/* Brief Instructions Note */}
-        <div className="p-3.5 rounded-xl bg-black/30 border border-emerald-500/15 text-[11px] text-zinc-300 flex items-start gap-2.5">
-          <Info className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-          <span>
-            לאחר ההורדה, פתח את הקובץ <strong className="text-white">simply-music.apk</strong> בהתראות המכשיר. אם הטלפון יבקש אישור להתקנה מדפדפן זה (מקורות לא מוכרים), אשר ב'הגדרות' וההתקנה תושלם מיד.
-          </span>
-        </div>
       </section>
 
       {/* Release Notifications ("לא לחפור") */}

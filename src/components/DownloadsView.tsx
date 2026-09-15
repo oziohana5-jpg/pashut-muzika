@@ -20,7 +20,6 @@ export const DownloadsView: React.FC = () => {
   const { t } = useLanguage();
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedDirect, setCopiedDirect] = useState(false);
-  const [downloadingApk, setDownloadingApk] = useState(false);
   const [downloadingMsi, setDownloadingMsi] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -39,84 +38,6 @@ export const DownloadsView: React.FC = () => {
         setCopiedLink(true);
         setTimeout(() => setCopiedLink(false), 3000);
       }
-    }
-  };
-
-  const handleDownloadApk = async () => {
-    setDownloadingApk(true);
-    setDownloadStatus('מכין את קובץ האפליקציה (simply-music.apk)...');
-    setDownloadError(null);
-
-    try {
-      let arrayBuffer: ArrayBuffer | null = null;
-
-      // Try base64 API first
-      try {
-        const res = await fetch('/api/download/apk-data', {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          credentials: 'same-origin',
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.base64) {
-            const binStr = window.atob(data.base64);
-            const len = binStr.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-              bytes[i] = binStr.charCodeAt(i);
-            }
-            arrayBuffer = bytes.buffer;
-          }
-        }
-      } catch (e) {
-        console.warn('API fetch fallback:', e);
-      }
-
-      // Direct download fallback
-      if (!arrayBuffer) {
-        const directRes = await fetch('/simply-music.apk', { credentials: 'same-origin' });
-        if (directRes.ok) {
-          arrayBuffer = await directRes.arrayBuffer();
-        }
-      }
-
-      if (!arrayBuffer || arrayBuffer.byteLength < 1000) {
-        // Fallback to direct anchor navigation
-        const a = document.createElement('a');
-        a.href = '/simply-music.apk';
-        a.download = 'simply-music.apk';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setDownloadStatus('ההורדה החלה בהצלחה!');
-        setTimeout(() => setDownloadStatus(null), 4000);
-        return;
-      }
-
-      const blob = new Blob([arrayBuffer], { type: 'application/vnd.android.package-archive' });
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = 'simply-music.apk';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-
-      setDownloadStatus('קובץ simply-music.apk ירד בהצלחה למכשירך!');
-      setTimeout(() => setDownloadStatus(null), 5000);
-    } catch (err: any) {
-      console.error(err);
-      setDownloadError('אירעה שגיאה בהורדה, מנסה קישור ישיר...');
-      const a = document.createElement('a');
-      a.href = '/simply-music.apk';
-      a.download = 'simply-music.apk';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } finally {
-      setDownloadingApk(false);
     }
   };
 
