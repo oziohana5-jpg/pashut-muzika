@@ -91,6 +91,8 @@ export const AdminDashboard: React.FC = () => {
   const [updateBody, setUpdateBody] = useState('');
   const [updateType, setUpdateType] = useState<AppUpdate['type']>('info');
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [publishingUpdate, setPublishingUpdate] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchAdminData = () => {
@@ -119,6 +121,12 @@ export const AdminDashboard: React.FC = () => {
     event.preventDefault();
     if (!token || !updateTitle.trim() || !updateBody.trim()) return;
     setUpdateMessage(null);
+    setShowPublishConfirm(true);
+  };
+
+  const confirmPublishUpdate = async () => {
+    if (!token || !updateTitle.trim() || !updateBody.trim() || publishingUpdate) return;
+    setPublishingUpdate(true);
     const response = await fetch('/api/admin/updates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -127,11 +135,14 @@ export const AdminDashboard: React.FC = () => {
     const data = await response.json();
     if (!response.ok) {
       setUpdateMessage(data.error || 'לא ניתן לפרסם את העדכון.');
+      setPublishingUpdate(false);
       return;
     }
     setUpdates((current) => [data.update, ...current]);
     setUpdateTitle('');
     setUpdateBody('');
+    setShowPublishConfirm(false);
+    setPublishingUpdate(false);
     setUpdateMessage('העדכון פורסם ונשמר במסד הנתונים.');
   };
 
@@ -285,6 +296,28 @@ export const AdminDashboard: React.FC = () => {
           </div>)}
         </div>}
       </section>
+
+      {showPublishConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-blue-500/30 bg-[#151821] p-5 text-white shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold">לפרסם את העדכון?</h2>
+                <p className="mt-1 text-xs text-zinc-400">העדכון יוצג לכל המשתמשים וישלח כהתראה למי שאישר התראות.</p>
+              </div>
+              <button type="button" onClick={() => setShowPublishConfirm(false)} className="rounded-lg px-2 py-1 text-zinc-400 hover:bg-white/10 hover:text-white" aria-label="סגור">×</button>
+            </div>
+            <div className="mt-4 space-y-2 rounded-xl border border-white/10 bg-black/20 p-3 text-right">
+              <p className="text-sm font-semibold text-white">{updateTitle}</p>
+              <p className="max-h-32 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-zinc-300">{updateBody}</p>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowPublishConfirm(false)} disabled={publishingUpdate} className="rounded-xl bg-white/10 px-4 py-2.5 text-xs font-semibold text-zinc-300 hover:bg-white/15 disabled:opacity-50">ביטול</button>
+              <button type="button" onClick={confirmPublishUpdate} disabled={publishingUpdate} className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-500 disabled:opacity-50">{publishingUpdate ? 'מפרסם...' : 'כן, פרסם'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* User Feedback — real + simulated + reply */}
       <section className="space-y-4 rounded-2xl border border-emerald-500/20 bg-[#13151d] p-6">
