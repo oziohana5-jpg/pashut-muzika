@@ -165,11 +165,23 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlistId, onDelete
       {/* Header Info */}
       <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 sm:gap-8 pt-4">
         <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden bg-zinc-900 shrink-0 shadow-2xl border border-white/10">
-          <img
-            src={playlist.coverUrl}
-            alt={playlist.name}
-            className="w-full h-full object-cover"
-          />
+          {playlist.coverUrl?.startsWith('gradient:') ? (() => {
+            const [, from, to, icon] = playlist.coverUrl.split(':');
+            return (
+              <div
+                className="w-full h-full flex items-center justify-center text-7xl"
+                style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+              >
+                {icon}
+              </div>
+            );
+          })() : (
+            <img
+              src={playlist.coverUrl}
+              alt={playlist.name}
+              className="w-full h-full object-cover"
+            />
+          )}
         </div>
 
         <div className="text-center sm:text-start space-y-2 flex-1">

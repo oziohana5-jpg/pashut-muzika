@@ -339,15 +339,12 @@ function getHourSlot(h: number): HourSlot {
   return { min: 870, max: 990 };
 }
 
-// Every 30 minutes: random increment of 1–5 listeners (gradual organic growth)
+// Every 30 minutes: random increment of 1–3 listeners (slow organic growth)
 function getGrowthBonus(): number {
   const halfHour = Math.floor(Date.now() / 1_800_000); // changes every 30 min
   const r = seededRand(halfHour * 7919 + 31337);
-  // 1–5 steps, each 1–3 listeners
-  const steps = 1 + Math.floor(r() * 4);
-  let bonus = 0;
-  for (let i = 0; i < steps; i++) bonus += 1 + Math.floor(r() * 3);
-  return bonus;
+  // Each half-hour tick adds exactly 1, 2, or 3 listeners
+  return 1 + Math.floor(r() * 3);
 }
 
 let _noiseState2 = (Date.now() ^ 0xcafebabe) >>> 0;

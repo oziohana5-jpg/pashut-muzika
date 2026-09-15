@@ -143,19 +143,26 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onNavigateArtist, onNavi
   }, [song?.id, song?.title, song?.titleHe]);
 
   // Find active lyric line index based on playback.currentTime
-  // High-frequency local time for smooth lyrics sync — calls YT player directly, bypasses React render cycle
+  // Use requestAnimationFrame for smooth 60fps lyrics sync on all devices
   const [localTime, setLocalTime] = useState(0);
   const getLiveTimeRef = useRef(getLiveTime);
   getLiveTimeRef.current = getLiveTime;
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
-    // 50ms = 20 times per second, smooth enough for lyrics
-    const interval = setInterval(() => {
+    let lastTime = -1;
+    const tick = () => {
       const t = getLiveTimeRef.current();
-      setLocalTime(t);
-    }, 50);
-    return () => clearInterval(interval);
-  }, []); // empty deps = runs forever independently
+      // Only update state if time actually changed (avoids unnecessary re-renders)
+      if (Math.abs(t - lastTime) > 0.05) {
+        lastTime = t;
+        setLocalTime(t);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
 
   // Use the player clock directly so the highlighted line matches the audio position.
   const lyricTime = localTime;

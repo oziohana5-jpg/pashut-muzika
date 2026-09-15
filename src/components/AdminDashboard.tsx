@@ -53,16 +53,25 @@ export const AdminDashboard: React.FC = () => {
     setTimeout(() => seek(Math.floor(pos)), 400);
   }
 
-  /** Colored initials avatar as fallback when cover image fails */
+  /** Colored initials avatar — shown always; img overlaid on top when it loads */
   function SongCover({ song, size = 7 }: { song: typeof SIM_SONGS[0]; size?: number }) {
+    const [imgFailed, setImgFailed] = useState(false);
     const color = ARTIST_COLORS[song.artistName] ?? '#6b7280';
     const initial = (song.artistName[0] ?? '?');
     return (
       <div
-        className={`w-${size} h-${size} rounded-md flex items-center justify-center text-white font-bold text-[10px] shrink-0`}
+        className={`w-${size} h-${size} rounded-md flex items-center justify-center text-white font-bold text-[10px] shrink-0 overflow-hidden relative`}
         style={{ background: `linear-gradient(135deg, ${color}cc, ${color}66)` }}
       >
-        {initial}
+        <span className="select-none">{initial}</span>
+        {!imgFailed && (
+          <img
+            src={song.coverUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover rounded-md"
+            onError={() => setImgFailed(true)}
+          />
+        )}
       </div>
     );
   }
@@ -200,7 +209,7 @@ export const AdminDashboard: React.FC = () => {
               <Users className="w-4 h-4 text-blue-400" />
               <span className="text-[11px] font-medium">{t('adminUsers')}</span>
             </div>
-            <p className="text-2xl font-black text-white">{stats.totalUsers}</p>
+            <p className="text-2xl font-black text-white">{onlineLoaded ? onlineCount.toLocaleString('he-IL') : stats.totalUsers}</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-[#13151d] border border-white/5">
@@ -294,12 +303,56 @@ export const AdminDashboard: React.FC = () => {
         <div className="space-y-2">
           {/* Real feedback */}
           {feedback.map((item) => (
-            <article key={item.id} className="rounded-xl border border-white/5 bg-white/[.02] p-4">
+            <article key={item.id} className="rounded-xl border border-white/5 bg-white/[.02] p-4 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <div><p className="text-sm font-semibold text-white">{item.userName}</p><p className="text-[11px] text-zinc-500">{item.userEmail}</p></div>
-                <time className="text-[11px] text-zinc-500">{new Date(item.createdAt).toLocaleString('he-IL')}</time>
+                <div>
+                  <p className="text-sm font-semibold text-white">{item.userName}</p>
+                  <p className="text-[11px] text-zinc-500">{item.userEmail}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/[?？]/.test(item.message) && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/20">שאלה</span>
+                  )}
+                  <time className="text-[11px] text-zinc-500">{new Date(item.createdAt).toLocaleString('he-IL')}</time>
+                </div>
               </div>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-300">{item.message}</p>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-300">{item.message}</p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setReplyOpen(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                  className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-white transition"
+                >
+                  {replyOpen[item.id]
+                    ? <><ChevronUp className="w-3 h-3" /> סגור</>
+                    : <><CornerDownLeft className="w-3 h-3" /> השב</>}
+                </button>
+              </div>
+              {replyOpen[item.id] && (
+                <div className="flex gap-2">
+                  <textarea
+                    value={replyDrafts[item.id] ?? ''}
+                    onChange={e => setReplyDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                    placeholder="כתוב תשובה למשתמש..."
+                    rows={2}
+                    className="flex-1 rounded-xl border border-white/10 bg-[#0d0f15] px-3 py-2 text-sm text-white outline-none focus:border-blue-500 resize-none"
+                  />
+                  <button
+                    onClick={async () => {
+                      const reply = replyDrafts[item.id] ?? '';
+                      if (!reply.trim() || !token) return;
+                      try {
+                        await fetch(`/api/admin/feedback/${item.id}/reply`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({ reply: reply.trim() }),
+                        });
+                      } catch {}
+                      setReplyOpen(prev => ({ ...prev, [item.id]: false }));
+                    }}
+                    className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition self-end"
+                  >שלח</button>
+                </div>
+              )}
             </article>
           ))}
           {/* Simulated feedback with reply */}
@@ -307,12 +360,17 @@ export const AdminDashboard: React.FC = () => {
             <article key={item.id} className="rounded-xl border border-white/5 bg-white/[.02] p-4 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div><p className="text-sm font-semibold text-white">{item.userName}</p><p className="text-[11px] text-zinc-500">{item.userEmail}</p></div>
-                <time className="text-[11px] text-zinc-500">{new Date(item.createdAt).toLocaleString('he-IL')}</time>
+                <div className="flex items-center gap-2">
+                  {/[?？]/.test(item.message) && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/20">שאלה</span>
+                  )}
+                  <time className="text-[11px] text-zinc-500">{new Date(item.createdAt).toLocaleString('he-IL')}</time>
+                </div>
               </div>
               <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-300">{item.message}</p>
               {item.adminReply && (
                 <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2.5">
-                  <p className="text-[11px] font-semibold text-blue-400 mb-1">תשובת המנהל · {item.repliedAt ? new Date(item.repliedAt).toLocaleString('he-IL') : ''}</p>
+                  <p className="text-[11px] font-semibold text-blue-400 mb-1">תשובת הצוות · {item.repliedAt ? new Date(item.repliedAt).toLocaleString('he-IL') : ''}</p>
                   <p className="text-sm text-zinc-200">{item.adminReply}</p>
                 </div>
               )}
@@ -468,16 +526,8 @@ export const AdminDashboard: React.FC = () => {
                             className="flex items-center gap-2 group text-start"
                             title={`נגן מ-${formatTime(getLivePosition(u))}`}
                           >
-                            {/* Cover with colorful fallback */}
-                            <div className="relative w-7 h-7 shrink-0">
-                              <img
-                                src={u.song.coverUrl}
-                                alt=""
-                                className="w-7 h-7 rounded-md object-cover bg-zinc-800 absolute inset-0"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                              />
-                              <SongCover song={u.song} size={7} />
-                            </div>
+                            {/* Cover — colorful fallback when CDN image fails */}
+                            <SongCover song={u.song} size={7} />
                             <div className="min-w-0">
                               <p className="truncate max-w-[130px] font-semibold text-white group-hover:text-emerald-400 transition-colors flex items-center gap-1">
                                 <Play className="w-2.5 h-2.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
