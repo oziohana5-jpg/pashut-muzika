@@ -443,12 +443,12 @@ export function useOnlineUsers(): OnlineUsersState {
     const tickSongs = () => {
       const now = Date.now();
       setUsers(prev => prev.map(u => {
-        if (noiseRand2() > 0.15) return u;
+        if (noiseRand() > 0.15) return u;
         const newSong   = SIM_SONGS[Math.floor(songRand() * SIM_SONGS.length)];
         const newOffset = Math.floor(newSong.duration * 0.05);
         return { ...u, song: newSong, songOffset: newOffset, songStartedAt: now };
       }));
-      songTimer = setTimeout(tickSongs, 28_000 + Math.floor(noiseRand2() * 10_000));
+      songTimer = setTimeout(tickSongs, 28_000 + Math.floor(noiseRand() * 10_000));
     };
     songTimer = setTimeout(tickSongs, 30_000);
 
