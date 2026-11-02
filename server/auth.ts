@@ -4,7 +4,7 @@ import { db } from './db';
 import { User } from './types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'simply_music_super_secure_key_2026';
-const ADMIN_EMAILS = new Set(['ozi@gmail.com']);
+const ADMIN_EMAILS = new Set(['ozi@gmail.com', 'knafe14@gmail.com']);
 
 export function isAdminEmail(email: string): boolean {
   return ADMIN_EMAILS.has(email.trim().toLowerCase());
